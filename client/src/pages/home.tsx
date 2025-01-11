@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
+import { MCQLoadingState } from "@/components/mcq-loading-state";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
@@ -183,110 +185,130 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Edit Form */}
-          {mcq && isEditing && (
-            <Card className="w-full max-w-4xl mx-auto">
-              <CardHeader>
-                <CardTitle>Edit MCQ</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...editForm}>
-                  <form onSubmit={editForm.handleSubmit(onSave)} className="space-y-6">
-                    <FormField
-                      control={editForm.control}
-                      name="clinicalScenario"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Clinical Scenario</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              className="min-h-[200px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="question"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Question</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              className="min-h-[100px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {Object.entries(mcq.options).map(([key, _]) => (
-                      <FormField
-                        key={key}
-                        control={editForm.control}
-                        name={`options.${key}` as keyof MCQ}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Option {key}</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                    <FormField
-                      control={editForm.control}
-                      name="correctAnswer"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Correct Answer</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="explanation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Explanation</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              className="min-h-[150px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save MCQ
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          )}
+          {/* Loading State or Edit Form */}
+          <AnimatePresence mode="wait">
+            {isGenerating && (
+              <Card className="w-full max-w-4xl mx-auto">
+                <CardHeader>
+                  <CardTitle>Generating MCQ...</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MCQLoadingState />
+                </CardContent>
+              </Card>
+            )}
+
+            {mcq && isEditing && !isGenerating && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="w-full max-w-4xl mx-auto">
+                  <CardHeader>
+                    <CardTitle>Edit MCQ</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...editForm}>
+                      <form onSubmit={editForm.handleSubmit(onSave)} className="space-y-6">
+                        <FormField
+                          control={editForm.control}
+                          name="clinicalScenario"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Clinical Scenario</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  className="min-h-[200px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="question"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Question</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  className="min-h-[100px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        {Object.entries(mcq.options).map(([key, _]) => (
+                          <FormField
+                            key={key}
+                            control={editForm.control}
+                            name={`options.${key}`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Option {key}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                        <FormField
+                          control={editForm.control}
+                          name="correctAnswer"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Correct Answer</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="explanation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Explanation</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  className="min-h-[150px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" disabled={isSaving}>
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save MCQ
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
     </div>
