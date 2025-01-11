@@ -377,9 +377,8 @@ export function registerRoutes(app: Express): Server {
           doc.addPage();
         }
 
-        // Question number and topic
+        // Question number only
         doc.font('Helvetica-Bold').fontSize(16).text(`Question ${index + 1}`);
-        doc.font('Helvetica').fontSize(12).text(`Topic: ${mcq.topic}`);
         doc.moveDown();
 
         // Clinical Scenario
