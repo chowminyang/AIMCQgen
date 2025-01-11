@@ -32,6 +32,8 @@ Please follow these steps to create the question:
 2. Question:
    - Test second-order thinking skills about ${topic}.
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+   - Do not reveal or hint at the diagnosis in the question.
+   - Avoid including obvious investigations or management options that would immediately give away the answer.
 
 3. Multiple Choice Options:
    - Provide 5 options (A-E) in alphabetical order:
