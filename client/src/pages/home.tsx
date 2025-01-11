@@ -174,7 +174,7 @@ export default function Home() {
                 This app leverages OpenAI's o1-mini reasoning model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                This application is experimental and copyrighted to Chow Minyang, 2025.
+                This application is experimental and copyrighted to <em><strong>Chow Minyang, 2025</strong></em>.
               </p>
             </CardHeader>
             <CardContent>
