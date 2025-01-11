@@ -7,6 +7,7 @@ import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { MCQEditForm } from "@/components/mcq-edit-form";
 import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
+import { PasswordOverlay } from "@/components/password-overlay";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -17,9 +18,11 @@ export default function Home() {
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
+    enabled: isAuthenticated, // Only fetch history when authenticated
   });
 
   const onGenerate = async (data: MCQFormData) => {
@@ -30,7 +33,6 @@ export default function Home() {
       setParsedMCQ(result.parsed);
       setShowEditor(true);
 
-      // Save to database
       await fetch('/api/mcq/save', {
         method: 'POST',
         headers: {
@@ -43,7 +45,6 @@ export default function Home() {
         }),
       });
 
-      // Refresh history
       refetchHistory();
     } catch (error: any) {
       console.error('MCQ generation error:', error);
@@ -66,6 +67,10 @@ export default function Home() {
       description: "MCQ has been updated successfully",
     });
   };
+
+  if (!isAuthenticated) {
+    return <PasswordOverlay onSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
