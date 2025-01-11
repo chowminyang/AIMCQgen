@@ -11,6 +11,7 @@ type LoginData = {
 type RequestResult = {
   ok: true;
   user?: User;
+  token?: string;
 } | {
   ok: false;
   message: string;
@@ -22,11 +23,12 @@ async function handleRequest(
   body?: LoginData
 ): Promise<RequestResult> {
   try {
+    const auth = localStorage.getItem('auth');
     const response = await fetch(url, {
       method,
       headers: {
         ...(body ? { "Content-Type": "application/json" } : {}),
-        ...(localStorage.getItem('auth') ? { "Authorization": `Bearer ${localStorage.getItem('auth')}` } : {})
+        ...(auth ? { "Authorization": `Bearer ${auth}` } : {})
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -41,8 +43,8 @@ async function handleRequest(
     }
 
     const data = await response.json();
-    if (data.user) {
-      localStorage.setItem('auth', 'authenticated');
+    if (data.token) {
+      localStorage.setItem('auth', data.token);
     }
     return { ok: true, user: data.user };
   } catch (e: any) {

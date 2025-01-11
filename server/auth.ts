@@ -23,10 +23,11 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Incorrect password" });
       }
 
-      // Return success with a simple session token
+      // Return success with a token
       res.json({
         message: "Login successful",
-        user: { id: 1 }
+        user: { id: 1 },
+        token: 'authenticated'
       });
     } catch (error: any) {
       console.error('Login error:', error);
@@ -40,7 +41,7 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'authenticated') {
       return res.status(401).json({ message: "Not logged in" });
     }
     res.json({ id: 1 });

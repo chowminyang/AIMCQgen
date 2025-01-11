@@ -5,7 +5,7 @@ export function registerRoutes(app: Express): Server {
   // Simple authentication middleware
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'authenticated') {
       return res.status(401).json({ message: "Not authorized" });
     }
     next();
