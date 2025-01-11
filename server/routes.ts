@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { mcqs, mcqSchema } from "@db/schema";
+import { mcqs } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
 
@@ -136,20 +136,60 @@ ${generatedContent}`;
     }
   });
 
-  // Save MCQ endpoint
+  // Save MCQ endpoint with parsed data
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, referenceText, generatedText } = req.body;
+      const { name, topic, referenceText, generatedText, parsedData } = req.body;
+
+      if (!name) {
+        return res.status(400).send("MCQ name is required");
+      }
 
       const [newMcq] = await db.insert(mcqs).values({
+        name,
         topic,
+        reference_text: referenceText,
         generated_text: generatedText,
+        parsed_data: parsedData,
       }).returning();
 
       res.json(newMcq);
     } catch (error: any) {
       console.error('Save MCQ error:', error);
       res.status(500).send(error.message || "Failed to save MCQ");
+    }
+  });
+
+  // Update MCQ endpoint
+  app.put("/api/mcq/:id", async (req, res) => {
+    try {
+      const mcqId = parseInt(req.params.id);
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
+      }
+
+      const { name, topic, referenceText, generatedText, parsedData } = req.body;
+
+      const [updatedMcq] = await db
+        .update(mcqs)
+        .set({
+          name,
+          topic,
+          reference_text: referenceText,
+          generated_text: generatedText,
+          parsed_data: parsedData,
+        })
+        .where(eq(mcqs.id, mcqId))
+        .returning();
+
+      if (!updatedMcq) {
+        return res.status(404).send("MCQ not found");
+      }
+
+      res.json(updatedMcq);
+    } catch (error: any) {
+      console.error('Update MCQ error:', error);
+      res.status(500).send(error.message || "Failed to update MCQ");
     }
   });
 

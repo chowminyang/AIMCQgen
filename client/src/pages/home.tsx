@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MCQDisplay } from "@/components/mcq-display";
 import { MCQLoadingState } from "@/components/mcq-loading-state";
@@ -8,7 +7,8 @@ import { MCQEditForm } from "@/components/mcq-edit-form";
 import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
 import { PasswordOverlay } from "@/components/password-overlay";
-import { generateMCQ, getMCQHistory } from "@/lib/api";
+import { SaveMCQDialog } from "@/components/save-mcq-dialog";
+import { generateMCQ, getMCQHistory, saveMCQ, updateMCQ } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -19,10 +19,12 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [editingMcqId, setEditingMcqId] = useState<number | null>(null);
 
   const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
-    enabled: isAuthenticated, // Only fetch history when authenticated
+    enabled: isAuthenticated,
   });
 
   const onGenerate = async (data: MCQFormData) => {
@@ -31,21 +33,8 @@ export default function Home() {
       const result = await generateMCQ(data);
       setGeneratedMCQ(result.raw);
       setParsedMCQ(result.parsed);
-      setShowEditor(true);
-
-      await fetch('/api/mcq/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: data.topic,
-          referenceText: data.referenceText,
-          generatedText: result.raw,
-        }),
-      });
-
-      refetchHistory();
+      setShowEditor(false);
+      setEditingMcqId(null);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       toast({
@@ -60,12 +49,64 @@ export default function Home() {
     }
   };
 
-  const handleSaveEdits = (editedMCQ: ParsedMCQ) => {
-    setParsedMCQ(editedMCQ);
-    toast({
-      title: "Success",
-      description: "MCQ has been updated successfully",
-    });
+  const handleSaveToLibrary = async (name: string) => {
+    if (!parsedMCQ || !generatedMCQ) return;
+
+    try {
+      await saveMCQ({
+        name,
+        topic: "",
+        generatedText: generatedMCQ,
+        parsedData: parsedMCQ,
+      });
+
+      toast({
+        title: "Success",
+        description: "MCQ has been saved to your library",
+      });
+      refetchHistory();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save MCQ",
+      });
+    }
+  };
+
+  const handleEditSaved = async (mcq: MCQHistoryItem) => {
+    if (!mcq.parsed_data) return;
+
+    setGeneratedMCQ(mcq.generated_text);
+    setParsedMCQ(mcq.parsed_data);
+    setEditingMcqId(mcq.id);
+    setShowEditor(true);
+  };
+
+  const handleSaveEdits = async (editedMCQ: ParsedMCQ) => {
+    try {
+      if (editingMcqId) {
+        // Updating existing MCQ
+        await updateMCQ(editingMcqId, {
+          name: mcqHistory.find(m => m.id === editingMcqId)?.name || "Edited MCQ",
+          generatedText: generatedMCQ || "",
+          parsedData: editedMCQ,
+        });
+      }
+
+      setParsedMCQ(editedMCQ);
+      toast({
+        title: "Success",
+        description: "MCQ has been updated successfully",
+      });
+      refetchHistory();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save edits",
+      });
+    }
   };
 
   if (!isAuthenticated) {
@@ -79,7 +120,7 @@ export default function Home() {
           {/* Generation Form */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle>Generating SBAs using reasoning LLMs (o1-mini)</CardTitle>
+              <CardTitle>Generate MCQs using o1-mini</CardTitle>
             </CardHeader>
             <CardContent>
               <MCQForm onSubmit={onGenerate} isLoading={isGenerating} />
@@ -100,11 +141,14 @@ export default function Home() {
 
           {/* Display Generated MCQ */}
           {!isGenerating && !showEditor && generatedMCQ && (
-            <div className="w-full max-w-4xl mx-auto">
+            <div className="w-full max-w-4xl mx-auto space-y-4">
               <MCQDisplay mcqText={generatedMCQ} />
-              <div className="mt-4 flex justify-center">
+              <div className="flex justify-center gap-4">
                 <Button onClick={() => setShowEditor(true)}>
                   Edit MCQ
+                </Button>
+                <Button onClick={() => setShowSaveDialog(true)}>
+                  Save to Library
                 </Button>
               </div>
             </div>
@@ -115,7 +159,9 @@ export default function Home() {
             <div className="w-full max-w-4xl mx-auto">
               <Card>
                 <CardHeader>
-                  <CardTitle>Edit MCQ</CardTitle>
+                  <CardTitle>
+                    {editingMcqId ? "Edit Saved MCQ" : "Edit Generated MCQ"}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <MCQEditForm
@@ -124,7 +170,10 @@ export default function Home() {
                   />
                   <Button
                     variant="outline"
-                    onClick={() => setShowEditor(false)}
+                    onClick={() => {
+                      setShowEditor(false);
+                      setEditingMcqId(null);
+                    }}
                     className="mt-4"
                   >
                     Back to View
@@ -134,18 +183,31 @@ export default function Home() {
             </div>
           )}
 
-          {/* MCQ History */}
+          {/* MCQ Library */}
           {mcqHistory.length > 0 && (
             <Card className="w-full max-w-4xl mx-auto">
               <CardHeader>
                 <CardTitle>MCQ Library</CardTitle>
               </CardHeader>
               <CardContent>
-                <MCQHistory items={mcqHistory} />
+                <MCQHistory
+                  items={mcqHistory}
+                  onEdit={handleEditSaved}
+                />
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* Save Dialog */}
+        {showSaveDialog && parsedMCQ && (
+          <SaveMCQDialog
+            isOpen={showSaveDialog}
+            onClose={() => setShowSaveDialog(false)}
+            onSave={handleSaveToLibrary}
+            mcq={parsedMCQ}
+          />
+        )}
       </main>
     </div>
   );
