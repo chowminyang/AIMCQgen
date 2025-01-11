@@ -1,9 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupAuth } from "./auth";
-import session from "express-session";
-import createMemoryStore from "memorystore";
 
 const app = express();
 
@@ -24,41 +21,13 @@ app.use((req, res, next) => {
   }
 });
 
-// Setup session middleware
-const MemoryStore = createMemoryStore(session);
-app.use(session({
-  secret: process.env.REPL_ID || "mcq-session-secret",
-  name: 'mcq.sid', // Set a specific cookie name
-  resave: false,
-  saveUninitialized: false,
-  store: new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  }),
-  cookie: {
-    secure: false, // Set to true only in production with HTTPS
-    sameSite: 'lax',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// Parse JSON and urlencoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Debug logging middleware
+// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-
-  console.log(`[${new Date().toISOString()}] ${req.method} ${path}`);
-  console.log('Session:', {
-    id: req.sessionID,
-    authenticated: req.session.authenticated,
-    userId: req.session.userId,
-    cookie: req.session.cookie
-  });
-
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -81,18 +50,9 @@ app.use((req, res, next) => {
   next();
 });
 
-//Setup authentication
-// Register routes
-// Error handling middleware
-// Setup vite in development
-// Start server
 
 (async () => {
   try {
-    // Setup authentication
-    setupAuth(app);
-    log("Authentication setup complete");
-
     // Register routes
     const server = registerRoutes(app);
     log("Routes registered");

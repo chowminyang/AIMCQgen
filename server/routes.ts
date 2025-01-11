@@ -4,7 +4,6 @@ import { db } from "@db";
 import { mcqs } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import { requireAuth } from "./auth";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -42,7 +41,7 @@ Format your response as a JSON object with this structure:
     "options": {
       "A": "First option",
       "B": "Second option",
-      "C": "Third option",
+      "C": "Third option", 
       "D": "Fourth option",
       "E": "Fifth option"
     },
@@ -53,7 +52,7 @@ Format your response as a JSON object with this structure:
 
 export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
-  app.post("/api/mcq/generate", requireAuth, async (req, res) => {
+  app.post("/api/mcq/generate", async (req, res) => {
     try {
       const { topic, referenceText } = req.body;
 
@@ -88,7 +87,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Save MCQ endpoint
-  app.post("/api/mcq/save", requireAuth, async (req, res) => {
+  app.post("/api/mcq/save", async (req, res) => {
     try {
       const { topic, clinicalScenario, question, options, correctAnswer, explanation } = req.body;
 
@@ -125,7 +124,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get MCQ history endpoint
-  app.get("/api/mcq/history", requireAuth, async (req, res) => {
+  app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
 
@@ -147,7 +146,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get single MCQ endpoint
-  app.get("/api/mcq/:id", requireAuth, async (req, res) => {
+  app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
       if (isNaN(mcqId)) {

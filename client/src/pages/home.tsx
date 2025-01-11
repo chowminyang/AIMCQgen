@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
-import { useUser } from "@/hooks/use-user";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
@@ -45,7 +44,6 @@ type MCQResponse = {
 
 export default function Home() {
   const { toast } = useToast();
-  const { user } = useUser();
   const [mcq, setMcq] = useState<MCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,15 +60,6 @@ export default function Home() {
   const editForm = useForm<MCQ>();
 
   const onGenerate = async (data: FormData) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please log in first",
-      });
-      return;
-    }
-
     setIsGenerating(true);
     try {
       const response = await fetch("/api/mcq/generate", {
@@ -78,7 +67,6 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -103,15 +91,6 @@ export default function Home() {
   };
 
   const onSave = async (mcqData: MCQ) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please log in first",
-      });
-      return;
-    }
-
     setIsSaving(true);
     try {
       const response = await fetch("/api/mcq/save", {
@@ -119,7 +98,6 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: 'include',
         body: JSON.stringify({
           ...mcqData,
           topic: generateForm.getValues("topic"),
@@ -190,7 +168,7 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isGenerating || !user}>
+                  <Button type="submit" disabled={isGenerating}>
                     {isGenerating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -291,7 +269,7 @@ export default function Home() {
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" disabled={isSaving || !user}>
+                    <Button type="submit" disabled={isSaving}>
                       {isSaving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
