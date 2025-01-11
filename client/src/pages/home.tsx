@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { MCQDisplay } from "@/components/mcq-display";
+import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { generateMCQ } from "@/lib/api";
 
 const formSchema = z.object({
@@ -115,6 +116,18 @@ export default function Home() {
               </Form>
             </CardContent>
           </Card>
+
+          {/* Loading State */}
+          {isGenerating && (
+            <Card className="w-full max-w-4xl mx-auto">
+              <CardHeader>
+                <CardTitle>Generating MCQ...</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MCQLoadingState />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Display Generated MCQ */}
           {!isGenerating && generatedMCQ && (
