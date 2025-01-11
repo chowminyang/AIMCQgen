@@ -3,18 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { MCQResponse } from "@/types";
 
 interface MCQDisplayProps {
-  mcq: MCQResponse;
+  mcqText: string;
 }
 
-export function MCQDisplay({ mcq }: MCQDisplayProps) {
+export function MCQDisplay({ mcqText }: MCQDisplayProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(mcq.text).then(() => {
+    navigator.clipboard.writeText(mcqText).then(() => {
       setCopied(true);
       toast({
         title: "Copied to clipboard",
@@ -24,16 +23,9 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
     });
   };
 
-  // Split the text into sections based on headers
-  const sections = mcq.text.split('\n\n').reduce((acc: Record<string, string>, section) => {
-    const headerMatch = section.match(/^(CLINICAL SCENARIO|QUESTION|OPTIONS|CORRECT ANSWER|EXPLANATION):/i);
-    if (headerMatch) {
-      const header = headerMatch[1].toUpperCase();
-      const content = section.replace(/^.*?:/, '').trim();
-      acc[header] = content;
-    }
-    return acc;
-  }, {});
+  // Split the text into sections
+  //This section is removed because the edited code doesn't use it.
+  // const sections = mcqText.split('\n\n');
 
   return (
     <Card className="w-full">
@@ -50,66 +42,10 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Clinical Scenario Section */}
-        {sections['CLINICAL SCENARIO'] && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Clinical Scenario</h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <p className="text-sm whitespace-pre-wrap">{sections['CLINICAL SCENARIO']}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Question Section */}
-        {sections['QUESTION'] && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Question</h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <p className="text-sm">{sections['QUESTION']}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Options Section */}
-        {sections['OPTIONS'] && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Options</h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <pre className="text-sm font-sans whitespace-pre-wrap">
-                {sections['OPTIONS']}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* Correct Answer Section */}
-        {sections['CORRECT ANSWER'] && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Correct Answer</h3>
-            <div className="rounded-lg bg-green-100 dark:bg-green-900/20 p-4">
-              <p className="text-sm">Option {sections['CORRECT ANSWER']}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Explanation Section */}
-        {sections['EXPLANATION'] && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Explanation</h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <p className="text-sm whitespace-pre-wrap">{sections['EXPLANATION']}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Raw Text Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Raw Response</h3>
-          <div className="rounded-lg bg-muted/50 p-4">
-            <pre className="text-sm overflow-x-auto whitespace-pre-wrap font-mono">
-              {mcq.text}
-            </pre>
-          </div>
+        <div className="rounded-lg bg-muted/50 p-4">
+          <pre className="text-sm whitespace-pre-wrap font-sans">
+            {mcqText}
+          </pre>
         </div>
       </CardContent>
     </Card>

@@ -4,7 +4,6 @@ import { db } from "@db";
 import { mcqs, mcqSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import PDFDocument from "pdfkit";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -81,10 +80,10 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      res.json({ text: generatedContent });
+      res.send(generatedContent); //Send the raw text
     } catch (error: any) {
       console.error('MCQ generation error:', error);
-      res.status(500).json({ message: error.message || "Failed to generate MCQ" });
+      res.status(500).send({ message: error.message || "Failed to generate MCQ" });
     }
   });
 

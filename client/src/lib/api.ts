@@ -1,6 +1,6 @@
-import type { MCQFormData, MCQResponse, MCQHistoryItem } from "@/types";
+import type { MCQFormData } from "@/types";
 
-export async function generateMCQ(data: MCQFormData): Promise<MCQResponse> {
+export async function generateMCQ(data: MCQFormData): Promise<string> {
   const response = await fetch('/api/mcq/generate', {
     method: 'POST',
     headers: {
@@ -13,10 +13,10 @@ export async function generateMCQ(data: MCQFormData): Promise<MCQResponse> {
     throw new Error(await response.text());
   }
 
-  return response.json();
+  return response.text();
 }
 
-export async function getMCQHistory(): Promise<MCQHistoryItem[]> {
+export async function getMCQHistory(): Promise<any[]> {
   const response = await fetch('/api/mcq/history');
 
   if (!response.ok) {
