@@ -1,9 +1,6 @@
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -14,7 +11,11 @@ import {
 } from "@/components/ui/form";
 import { encode } from "gpt-tokenizer";
 import type { MCQFormData } from "@/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
@@ -27,6 +28,8 @@ interface MCQFormProps {
 }
 
 const MAX_TOKENS = 128000;
+const WARNING_THRESHOLD = 0.75; // 75%
+const DANGER_THRESHOLD = 0.90; // 90%
 
 // Base prompt template that's used for every request
 const BASE_PROMPT = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "TOPIC_PLACEHOLDER". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
@@ -85,6 +88,21 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
     setTokenCount(baseTokens + referenceTextTokens);
   }, [watchReferenceText, watchTopic]);
 
+  const tokenCounterStyles = useMemo(() => {
+    const usageRatio = tokenCount / MAX_TOKENS;
+    return cn(
+      "text-sm transition-colors duration-200",
+      {
+        "text-green-500": usageRatio < WARNING_THRESHOLD,
+        "text-yellow-500": usageRatio >= WARNING_THRESHOLD && usageRatio < DANGER_THRESHOLD,
+        "text-orange-500": usageRatio >= DANGER_THRESHOLD && usageRatio < 1,
+        "text-destructive font-medium": usageRatio >= 1
+      }
+    );
+  }, [tokenCount]);
+
+  const remainingTokens = MAX_TOKENS - tokenCount;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -116,10 +134,10 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
                     {...field}
                   />
                 </FormControl>
-                <div className={`text-sm ${tokenCount > MAX_TOKENS ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {MAX_TOKENS - tokenCount} tokens remaining
-                  {tokenCount > MAX_TOKENS && (
-                    <span className="block text-destructive">
+                <div className={tokenCounterStyles}>
+                  {remainingTokens.toLocaleString()} tokens remaining
+                  {remainingTokens < 0 && (
+                    <span className="block font-medium">
                       Text exceeds maximum token limit
                     </span>
                   )}
@@ -132,10 +150,10 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
 
         <Button
           type="submit"
-          disabled={isLoading || tokenCount > MAX_TOKENS}
+          disabled={isLoading || remainingTokens < 0}
           className="w-full"
         >
-          {isLoading ? "Generating..." : "Generate a high quality MCQ"}
+          {isLoading ? "Generating..." : "Generate MCQ"}
         </Button>
       </form>
     </Form>
