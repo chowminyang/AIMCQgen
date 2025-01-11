@@ -27,19 +27,7 @@ export const mcqs = pgTable("mcqs", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Schema validations
-export const insertUserSchema = createInsertSchema(users);
-export const selectUserSchema = createSelectSchema(users);
-export const insertMcqSchema = createInsertSchema(mcqs);
-export const selectMcqSchema = createSelectSchema(mcqs);
-
-// Types
-export type InsertUser = typeof users.$inferInsert;
-export type SelectUser = typeof users.$inferSelect;
-export type InsertMcq = typeof mcqs.$inferInsert;
-export type SelectMcq = typeof mcqs.$inferSelect;
-
-// Custom Zod schema for MCQ validation
+// Schema validations using zod
 export const mcqSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   clinical_scenario: z.string().min(1, "Clinical scenario is required"),
@@ -54,3 +42,11 @@ export const mcqSchema = z.object({
   correct_answer: z.string().min(1, "Correct answer is required"),
   explanation: z.string().min(1, "Explanation is required"),
 });
+
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+
+export type InsertMcq = typeof mcqs.$inferInsert;
+export type SelectMcq = typeof mcqs.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+export type SelectUser = typeof users.$inferSelect;
