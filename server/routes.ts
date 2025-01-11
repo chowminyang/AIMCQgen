@@ -12,7 +12,7 @@ const openai = new OpenAI({
 // Medical MCQ system prompt from the template
 const SYSTEM_PROMPT = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
-Please create a single high-quality MCQ following this format:
+Please respond with a JSON object containing a single high-quality MCQ in the following format:
 {
   "mcq": {
     "clinicalScenario": "A detailed 200-word clinical scenario",
@@ -45,7 +45,7 @@ export function registerRoutes(app: Express): Server {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Generate one challenging medical MCQ for the following topic: ${topic}\n\nReference text: ${referenceText}`
+            content: `Generate one challenging medical MCQ for the following topic and return it as a JSON object: ${topic}\n\nReference text: ${referenceText}`
           }
         ],
         temperature: 0.7,
