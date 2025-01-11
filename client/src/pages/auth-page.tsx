@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 const formSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -32,6 +33,7 @@ export default function AuthPage() {
   const { login } = useUser();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [_, setLocation] = useLocation();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -44,7 +46,9 @@ export default function AuthPage() {
     setIsLoading(true);
     try {
       const result = await login(data);
-      if (!result.ok) {
+      if (result.ok) {
+        setLocation("/");
+      } else {
         toast({
           variant: "destructive",
           title: "Error",

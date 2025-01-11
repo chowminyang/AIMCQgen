@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 
 // Authentication password
-const APP_PASSWORD = "mcq123"; // Simple development password
+const APP_PASSWORD = "CMYMCQ"; // Simple development password
 
 // Login schema validation
 const loginSchema = z.object({
@@ -19,14 +19,6 @@ declare module 'express-session' {
 
 // Authentication middleware
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  // Debug log the session state
-  console.log('Auth check - Session state:', {
-    id: req.sessionID,
-    authenticated: req.session.authenticated,
-    userId: req.session.userId,
-    cookie: req.session.cookie
-  });
-
   if (!req.session.authenticated) {
     return res.status(401).json({ message: "Please login first" });
   }
@@ -38,8 +30,6 @@ export function setupAuth(app: Express) {
   // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
-      console.log('Login attempt - Request body:', req.body);
-
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ 
@@ -48,7 +38,7 @@ export function setupAuth(app: Express) {
       }
 
       const { password } = result.data;
-      if (password.toLowerCase() !== APP_PASSWORD.toLowerCase()) {
+      if (password !== APP_PASSWORD) {
         return res.status(401).json({ message: "Invalid password" });
       }
 
@@ -58,20 +48,10 @@ export function setupAuth(app: Express) {
 
       // Force session save and wait for it
       await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) {
-            console.error('Session save error:', err);
-            reject(err);
-          }
+        req.session.save((err: any) => {
+          if (err) reject(err);
           resolve();
         });
-      });
-
-      console.log('Login successful - Session after login:', {
-        id: req.sessionID,
-        authenticated: req.session.authenticated,
-        userId: req.session.userId,
-        cookie: req.session.cookie
       });
 
       res.json({
@@ -86,13 +66,6 @@ export function setupAuth(app: Express) {
 
   // User info endpoint
   app.get("/api/user", (req, res) => {
-    console.log('User info check - Session state:', {
-      id: req.sessionID,
-      authenticated: req.session.authenticated,
-      userId: req.session.userId,
-      cookie: req.session.cookie
-    });
-
     if (req.session.authenticated) {
       return res.json({ id: req.session.userId });
     }
@@ -101,7 +74,7 @@ export function setupAuth(app: Express) {
 
   // Logout endpoint
   app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
+    req.session.destroy((err: any) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }

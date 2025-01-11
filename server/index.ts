@@ -1,8 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+const MemoryStore = createMemoryStore(session);
 
 // Setup CORS for development first
 app.use((req, res, next) => {
@@ -23,6 +26,22 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session configuration
+app.use(session({
+  name: 'mcq.sid',
+  store: new MemoryStore({
+    checkPeriod: 86400000 // Prune expired entries every 24h
+  }),
+  secret: 'mcq-generator-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
 
 // Logging middleware
 app.use((req, res, next) => {
