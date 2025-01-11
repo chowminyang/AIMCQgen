@@ -95,9 +95,37 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-4">
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <pre className="whitespace-pre-wrap text-sm font-sans">{item.raw_content}</pre>
+              <div className="space-y-6 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <h3 className="font-semibold mb-2">Clinical Scenario</h3>
+                  <p className="text-sm">{item.parsed_content.clinicalScenario}</p>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Question</h3>
+                  <p className="text-sm">{item.parsed_content.question}</p>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Options</h3>
+                  <div className="space-y-2">
+                    {Object.entries(item.parsed_content.options).map(([letter, text]) => (
+                      <div key={letter} className="text-sm flex">
+                        <span className="font-medium w-8">{letter})</span>
+                        <span>{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Correct Answer</h3>
+                  <p className="text-sm">Option {item.parsed_content.correctAnswer}</p>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Explanation</h3>
+                  <p className="text-sm">{item.parsed_content.explanation}</p>
                 </div>
               </div>
             </AccordionContent>
