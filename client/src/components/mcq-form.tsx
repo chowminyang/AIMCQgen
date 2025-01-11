@@ -16,7 +16,6 @@ import type { MCQFormData } from "@/types";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
-  purpose: z.string().min(1, "Purpose is required"),
   referenceText: z.string().optional().default(""),
 });
 
@@ -30,7 +29,6 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       topic: "",
-      purpose: "",
       referenceText: "",
     },
   });
@@ -45,21 +43,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
             <FormItem>
               <FormLabel>Topic</FormLabel>
               <FormControl>
-                <Input placeholder="Enter MCQ topic..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="purpose"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Purpose</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter MCQ purpose..." {...field} />
+                <Input placeholder="Enter medical topic for MCQ..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -16,7 +16,7 @@ export function registerRoutes(app: Express): Server {
       const { topic, referenceText } = req.body;
 
       if (!topic) {
-        return res.status(400).json({ message: "Topic is required" });
+        return res.status(400).send("Topic is required");
       }
 
       const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "${topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
@@ -68,7 +68,8 @@ EXPLANATION:
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }]
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -76,10 +77,14 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      res.send(generatedContent); //Send the raw text
+      res.send(generatedContent);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
-      res.status(500).send({ message: error.message || "Failed to generate MCQ" });
+      if (error.response?.status === 400) {
+        res.status(400).send(error.response.data.error.message || "Invalid request to OpenAI API");
+      } else {
+        res.status(500).send(error.message || "Failed to generate MCQ");
+      }
     }
   });
 
@@ -119,7 +124,7 @@ EXPLANATION:
       res.json(mcqHistory);
     } catch (error: any) {
       console.error('MCQ history error:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch MCQ history" });
+      res.status(500).send(error.message || "Failed to fetch MCQ history");
     }
   });
 
@@ -127,18 +132,18 @@ EXPLANATION:
     try {
       const mcqId = parseInt(req.params.id);
       if (isNaN(mcqId)) {
-        return res.status(400).json({ message: "Invalid MCQ ID" });
+        return res.status(400).send("Invalid MCQ ID");
       }
 
       const [mcq] = await db.select().from(mcqs).where(eq(mcqs.id, mcqId));
       if (!mcq) {
-        return res.status(404).json({ message: "MCQ not found" });
+        return res.status(404).send("MCQ not found");
       }
 
       res.json(mcq);
     } catch (error: any) {
       console.error('Get MCQ error:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch MCQ" });
+      res.status(500).send(error.message || "Failed to fetch MCQ");
     }
   });
 
