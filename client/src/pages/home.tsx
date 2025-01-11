@@ -24,29 +24,26 @@ const formSchema = z.object({
   referenceText: z.string().min(1, "Reference text is required"),
 });
 
+const mcqFormSchema = z.object({
+  clinicalScenario: z.string().min(1, "Clinical scenario is required"),
+  question: z.string().min(1, "Question is required"),
+  options: z.object({
+    A: z.string().min(1, "Option A is required"),
+    B: z.string().min(1, "Option B is required"),
+    C: z.string().min(1, "Option C is required"),
+    D: z.string().min(1, "Option D is required"),
+    E: z.string().min(1, "Option E is required"),
+  }),
+  correctAnswer: z.string().min(1, "Correct answer is required"),
+  explanation: z.string().min(1, "Explanation is required"),
+});
+
 type FormData = z.infer<typeof formSchema>;
-
-type MCQ = {
-  clinicalScenario: string;
-  question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  };
-  correctAnswer: string;
-  explanation: string;
-};
-
-type MCQResponse = {
-  mcq: MCQ;
-};
+type MCQFormData = z.infer<typeof mcqFormSchema>;
 
 export default function Home() {
   const { toast } = useToast();
-  const [mcq, setMcq] = useState<MCQ | null>(null);
+  const [mcq, setMcq] = useState<MCQFormData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -59,7 +56,9 @@ export default function Home() {
     },
   });
 
-  const editForm = useForm<MCQ>();
+  const editForm = useForm<MCQFormData>({
+    resolver: zodResolver(mcqFormSchema),
+  });
 
   const onGenerate = async (data: FormData) => {
     setIsGenerating(true);
@@ -76,7 +75,7 @@ export default function Home() {
         throw new Error(await response.text());
       }
 
-      const result: MCQResponse = await response.json();
+      const result = await response.json();
       setMcq(result.mcq);
       setIsEditing(true);
       editForm.reset(result.mcq);
@@ -92,7 +91,7 @@ export default function Home() {
     }
   };
 
-  const onSave = async (mcqData: MCQ) => {
+  const onSave = async (mcqData: MCQFormData) => {
     setIsSaving(true);
     try {
       const response = await fetch("/api/mcq/save", {
@@ -244,7 +243,7 @@ export default function Home() {
                             </FormItem>
                           )}
                         />
-                        {Object.entries(mcq.options).map(([key, _]) => (
+                        {(['A', 'B', 'C', 'D', 'E'] as const).map((key) => (
                           <FormField
                             key={key}
                             control={editForm.control}
