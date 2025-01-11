@@ -23,11 +23,36 @@ export function registerRoutes(app: Express): Server {
       // Embed the system prompt in the user message since o1-mini doesn't support system messages
       const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
-Please create an MCQ following these guidelines:
-1. Clinical Scenario: Write a 200-word scenario with relevant details
-2. Question: Test second-order thinking
-3. Options: Provide 5 options (A-E) with one best answer
-4. Explanation: Explain why each option is correct or incorrect
+Please follow these steps to create the question:
+
+1. Clinical Scenario:
+   - Write a 200-word clinical scenario in the present tense.
+   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+   - Use ONLY standard international units with reference ranges for any test results.
+   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+
+2. Question:
+   - Ensure the question tests at least second-order thinking.
+   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+
+3. Multiple Choice Options:
+   - Provide 5 options in alphabetical order:
+     a) One best and correct answer
+     b) One correct answer, but not the best option
+     c-e) Plausible options that might be correct, but are not the best answer
+   - Keep the length of all options consistent.
+   - Avoid misleading or ambiguously worded distractors.
+
+4. Correct Answer and Feedback:
+   - Identify the correct answer and explain why it is the best option.
+   - Provide option-specific explanations for why each option is correct or incorrect.
+   - If a reference file was provided, cite relevant information from it in your explanations.
+
+5. Question Structure:
+   - Ensure the stem focuses on one specific idea or concept.
+   - Write the stem clearly and concisely.
+   - Include all necessary information and subtle clues within the stem itself.
+   - Avoid overt hints or cues that might lead quickly to the correct answer.
 
 For this topic and reference text:
 Topic: ${topic}
