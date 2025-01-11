@@ -14,10 +14,10 @@ export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
-      const { topic, referenceText } = req.body;
+      const { topic, purpose, referenceText } = req.body;
 
-      if (!topic || !referenceText) {
-        return res.status(400).json({ message: "Topic and reference text are required" });
+      if (!topic) {
+        return res.status(400).json({ message: "Topic is required" });
       }
 
       const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
@@ -45,11 +45,11 @@ Please follow these steps to create the question:
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   - If a reference file was provided, cite relevant information from it in your explanations.
+   ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}
 
-For this topic and reference text:
+For this topic:
 Topic: ${topic}
-Reference text: ${referenceText}
+${referenceText ? `Reference text: ${referenceText}` : ''}
 
 Format your response in the following structure, using clear section headers:
 
@@ -84,6 +84,7 @@ EXPLANATION:
       // Parse the text response into sections
       const sections = generatedContent.split('\n\n');
       const mcqResponse = {
+        text: generatedContent,
         mcq: {
           clinicalScenario: '',
           question: '',
@@ -111,7 +112,8 @@ EXPLANATION:
           for (const line of optionsLines) {
             const match = line.match(/^([A-E])\)\s(.+)$/);
             if (match) {
-              mcqResponse.mcq.options[match[1]] = match[2].trim();
+              const [, letter, text] = match;
+              mcqResponse.mcq.options[letter as keyof typeof mcqResponse.mcq.options] = text.trim();
             }
           }
         } else if (section.startsWith('CORRECT ANSWER:')) {

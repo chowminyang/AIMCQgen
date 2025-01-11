@@ -93,12 +93,39 @@ export function MCQDisplay({ mcq, formData }: MCQDisplayProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <Textarea
-          value={editedText}
-          onChange={(e) => setEditedText(e.target.value)}
-          className="min-h-[300px] font-mono text-sm"
-        />
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Clinical Scenario</h3>
+          <p className="text-sm text-gray-700">{mcq.mcq.clinicalScenario}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Question</h3>
+          <p className="text-sm text-gray-700">{mcq.mcq.question}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Options</h3>
+          {Object.entries(mcq.mcq.options).map(([key, value]) => (
+            <div key={key} className="text-sm text-gray-700">
+              {key}) {value}
+            </div>
+          ))}
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Correct Answer</h3>
+          <p className="text-sm text-gray-700">{mcq.mcq.correctAnswer}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Explanation</h3>
+          <p className="text-sm text-gray-700">{mcq.mcq.explanation}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Raw Text (Editable)</h3>
+          <Textarea
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+            className="min-h-[300px] font-mono text-sm"
+          />
+        </div>
       </CardContent>
     </Card>
   );

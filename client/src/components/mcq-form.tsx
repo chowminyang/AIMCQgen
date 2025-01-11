@@ -17,7 +17,7 @@ import type { MCQFormData } from "@/types";
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   purpose: z.string().min(1, "Purpose is required"),
-  referenceText: z.string(),
+  referenceText: z.string().optional(),
 });
 
 interface MCQFormProps {
