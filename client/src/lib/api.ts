@@ -32,9 +32,10 @@ export async function getMCQHistory(): Promise<MCQHistoryItem[]> {
 }
 
 export async function saveMCQ(data: {
+  name: string;
   topic: string;
-  referenceText?: string;
-  generatedText: string;
+  rawContent: string;
+  parsedContent: any;
 }): Promise<MCQHistoryItem> {
   const response = await fetch('/api/mcq/save', {
     method: 'POST',
@@ -49,4 +50,24 @@ export async function saveMCQ(data: {
   }
 
   return response.json();
+}
+
+export async function getMCQ(id: number): Promise<MCQHistoryItem> {
+  const response = await fetch(`/api/mcq/${id}`);
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return response.json();
+}
+
+export async function deleteMCQ(id: number): Promise<void> {
+  const response = await fetch(`/api/mcq/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
 }

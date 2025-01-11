@@ -78,32 +78,18 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly:
-
-{
-  "clinicalScenario": "The clinical scenario text here",
-  "question": "The question text here",
-  "options": {
-    "A": "Option A text",
-    "B": "Option B text",
-    "C": "Option C text",
-    "D": "Option D text",
-    "E": "Option E text"
-  },
-  "correctAnswer": "A single letter (A-E)",
-  "explanation": "The explanation text here"
-}
+      const parsePrompt = `Given this MCQ text, extract and format the content into sections. Return only the parsed content as text, do not include any JSON formatting or code blocks.
 
 Here's the MCQ to parse:
 
 ${generatedContent}`;
 
       const parsedCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
-          { 
-            role: "system", 
-            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Return only the raw JSON object without any markdown formatting, code blocks, or additional text." 
+          {
+            role: "system",
+            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into clear sections. Return only the parsed content without any JSON structure or additional text."
           },
           { role: "user", content: parsePrompt }
         ]
@@ -114,22 +100,10 @@ ${generatedContent}`;
         throw new Error("Failed to parse MCQ content");
       }
 
-      try {
-        const cleanedContent = parsedContent
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
-          .trim();
-
-        const parsedJson = JSON.parse(cleanedContent);
-        res.json({
-          raw: generatedContent,
-          parsed: parsedJson
-        });
-      } catch (parseError) {
-        console.error('JSON parsing error:', parseError);
-        console.error('Raw parsed content:', parsedContent);
-        throw new Error("Invalid JSON format received from parsing");
-      }
+      res.json({
+        raw: generatedContent,
+        parsed: parsedContent
+      });
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       res.status(500).send(error.message || "Failed to generate MCQ");
@@ -139,11 +113,13 @@ ${generatedContent}`;
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, referenceText, generatedText } = req.body;
+      const { name, topic, rawContent, parsedContent } = req.body;
 
       const [newMcq] = await db.insert(mcqs).values({
+        name,
         topic,
-        generated_text: generatedText,
+        raw_content: rawContent,
+        parsed_content: parsedContent,
       }).returning();
 
       res.json(newMcq);
@@ -164,6 +140,23 @@ ${generatedContent}`;
     }
   });
 
+  // Delete MCQ endpoint
+  app.delete("/api/mcq/:id", async (req, res) => {
+    try {
+      const mcqId = parseInt(req.params.id);
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
+      }
+
+      await db.delete(mcqs).where(eq(mcqs.id, mcqId));
+      res.status(200).send("MCQ deleted successfully");
+    } catch (error: any) {
+      console.error('Delete MCQ error:', error);
+      res.status(500).send(error.message || "Failed to delete MCQ");
+    }
+  });
+
+  // Get single MCQ endpoint
   app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
