@@ -11,7 +11,6 @@ type LoginData = {
 type RequestResult = {
   ok: true;
   user?: User;
-  token?: string;
 } | {
   ok: false;
   message: string;
@@ -23,14 +22,11 @@ async function handleRequest(
   body?: LoginData
 ): Promise<RequestResult> {
   try {
-    const auth = localStorage.getItem('auth');
     const response = await fetch(url, {
       method,
-      headers: {
-        ...(body ? { "Content-Type": "application/json" } : {}),
-        ...(auth ? { "Authorization": `Bearer ${auth}` } : {})
-      },
+      headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include', // Important for session cookies
     });
 
     if (!response.ok) {
@@ -43,9 +39,6 @@ async function handleRequest(
     }
 
     const data = await response.json();
-    if (data.token) {
-      localStorage.setItem('auth', data.token);
-    }
     return { ok: true, user: data.user };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
@@ -53,21 +46,13 @@ async function handleRequest(
 }
 
 async function fetchUser(): Promise<User | null> {
-  const auth = localStorage.getItem('auth');
-  if (!auth) {
-    return null;
-  }
-
   try {
     const response = await fetch('/api/user', {
-      headers: {
-        "Authorization": `Bearer ${auth}`
-      }
+      credentials: 'include'
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        localStorage.removeItem('auth');
         return null;
       }
       throw new Error(`${response.status}: ${await response.text()}`);
@@ -102,7 +87,6 @@ export function useUser() {
   const logoutMutation = useMutation<RequestResult, Error>({
     mutationFn: () => handleRequest('/api/logout', 'POST'),
     onSuccess: () => {
-      localStorage.removeItem('auth');
       queryClient.setQueryData(['user'], null);
     },
   });

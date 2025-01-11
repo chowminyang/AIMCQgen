@@ -4,11 +4,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const auth = localStorage.getItem('auth');
         const res = await fetch(queryKey[0] as string, {
-          headers: {
-            ...(auth ? { "Authorization": `Bearer ${auth}` } : {})
-          }
+          credentials: "include", // Important for session cookies
         });
 
         if (!res.ok) {
