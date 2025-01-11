@@ -28,6 +28,37 @@ interface MCQFormProps {
 
 const MAX_TOKENS = 128000;
 
+// Base prompt template that's used for every request
+const BASE_PROMPT = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "TOPIC_PLACEHOLDER". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+
+Please follow these steps to create the question:
+
+1. Clinical Scenario:
+   - Write a 200-word clinical scenario in the present tense.
+   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+   - Use ONLY standard international units with reference ranges for any test results.
+   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+
+2. Question:
+   - Test second-order thinking skills about TOPIC_PLACEHOLDER.
+   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+   - Do not reveal or hint at the diagnosis in the question.
+   - Avoid including obvious investigations or management options that would immediately give away the answer.
+
+3. Multiple Choice Options:
+   - Provide 5 options (A-E) in alphabetical order:
+     a) One best and correct answer
+     b) One correct answer, but not the best option
+     c-e) Plausible options that might be correct, but are not the best answer
+   - Keep the length of all options consistent.
+   - Avoid misleading or ambiguously worded distractors.
+
+4. Correct Answer and Feedback:
+   - Identify the correct answer and explain why it is the best option.
+   - Provide option-specific explanations for why each option is correct or incorrect.`;
+
+const REFERENCE_TEXT_PREFIX = "   - Use this reference text in your explanations where relevant: ";
+
 export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
   const [tokenCount, setTokenCount] = useState(0);
   const form = useForm<MCQFormData>({
@@ -39,15 +70,20 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
   });
 
   const watchReferenceText = form.watch("referenceText");
+  const watchTopic = form.watch("topic");
 
   useEffect(() => {
-    if (watchReferenceText) {
-      const tokens = encode(watchReferenceText).length;
-      setTokenCount(tokens);
-    } else {
-      setTokenCount(0);
-    }
-  }, [watchReferenceText]);
+    // Calculate tokens for the base prompt with the current topic
+    const promptWithTopic = BASE_PROMPT.replace(/TOPIC_PLACEHOLDER/g, watchTopic || "");
+    const baseTokens = encode(promptWithTopic).length;
+
+    // Calculate tokens for reference text with its prefix
+    const referenceTextTokens = watchReferenceText ? 
+      encode(REFERENCE_TEXT_PREFIX + watchReferenceText).length : 0;
+
+    // Set the total token count
+    setTokenCount(baseTokens + referenceTextTokens);
+  }, [watchReferenceText, watchTopic]);
 
   return (
     <Form {...form}>

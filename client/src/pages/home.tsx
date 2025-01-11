@@ -1,35 +1,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { MCQDisplay } from "@/components/mcq-display";
 import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { MCQEditForm } from "@/components/mcq-edit-form";
 import { MCQHistory } from "@/components/mcq-history";
+import { MCQForm } from "@/components/mcq-form";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
-import type { ParsedMCQ, MCQHistoryItem } from "@/types";
+import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-
-const formSchema = z.object({
-  topic: z.string().min(1, "Topic is required"),
-  referenceText: z.string().optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
 
 export default function Home() {
   const { toast } = useToast();
@@ -37,23 +17,13 @@ export default function Home() {
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
-  const [currentTopic, setCurrentTopic] = useState<string>("");
 
   const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
   });
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      topic: "",
-      referenceText: "",
-    },
-  });
-
-  const onGenerate = async (data: FormData) => {
+  const onGenerate = async (data: MCQFormData) => {
     setIsGenerating(true);
-    setCurrentTopic(data.topic);
     try {
       const result = await generateMCQ(data);
       setGeneratedMCQ(result.raw);
@@ -107,52 +77,7 @@ export default function Home() {
               <CardTitle>Generate Medical MCQ</CardTitle>
             </CardHeader>
             <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onGenerate)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="topic"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Topic</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter MCQ topic..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="referenceText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Reference Material (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Paste reference text here..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" disabled={isGenerating} className="w-full">
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      "Generate MCQ"
-                    )}
-                  </Button>
-                </form>
-              </Form>
+              <MCQForm onSubmit={onGenerate} isLoading={isGenerating} />
             </CardContent>
           </Card>
 
