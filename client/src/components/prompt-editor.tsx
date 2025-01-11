@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,11 @@ export function PromptEditor({ currentPrompt, onSave }: PromptEditorProps) {
   const [password, setPassword] = useState("");
   const [editedPrompt, setEditedPrompt] = useState(currentPrompt);
   const { toast } = useToast();
+
+  // Update editedPrompt when currentPrompt changes (i.e., after initial load)
+  useEffect(() => {
+    setEditedPrompt(currentPrompt);
+  }, [currentPrompt]);
 
   const handleUnlock = () => {
     if (password === "CMYMCQadmin") {
