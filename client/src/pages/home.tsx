@@ -74,7 +74,7 @@ export default function Home() {
           {/* Generation Form */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle>Generate Medical MCQ</CardTitle>
+              <CardTitle>Generating SBAs using reasoning LLMs (o1-mini)</CardTitle>
             </CardHeader>
             <CardContent>
               <MCQForm onSubmit={onGenerate} isLoading={isGenerating} />
