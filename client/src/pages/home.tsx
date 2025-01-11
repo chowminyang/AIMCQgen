@@ -166,14 +166,6 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto py-8 px-4">
         <div className="space-y-8">
-          {/* Prompt Editor */}
-          <div className="w-full max-w-4xl mx-auto">
-            <PromptEditor
-              currentPrompt={promptData?.prompt || ''}
-              onSave={(newPrompt) => updatePromptMutation.mutate(newPrompt)}
-            />
-          </div>
-
           {/* Generation Form */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
@@ -229,7 +221,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* MCQ History */}
+          {/* MCQ Library */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle>MCQ Library</CardTitle>
@@ -242,6 +234,14 @@ export default function Home() {
               />
             </CardContent>
           </Card>
+
+          {/* Prompt Editor - Moved below MCQ Library */}
+          <div className="w-full max-w-4xl mx-auto">
+            <PromptEditor
+              currentPrompt={promptData?.prompt || ''}
+              onSave={(newPrompt) => updatePromptMutation.mutate(newPrompt)}
+            />
+          </div>
         </div>
       </main>
 
