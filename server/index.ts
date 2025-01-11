@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add request logging middleware
+// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -26,11 +26,6 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });
@@ -40,11 +35,11 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Setup authentication before any route handling
+    // Setup authentication
     setupAuth(app);
     log("Authentication setup complete");
 
-    // Register routes after auth is setup
+    // Register routes
     const server = registerRoutes(app);
     log("Routes registered");
 
@@ -53,11 +48,10 @@ app.use((req, res, next) => {
       console.error('Server error:', err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-
       res.status(status).json({ message });
     });
 
-    // Setup vite in development after routes
+    // Setup vite in development
     if (app.get("env") === "development") {
       await setupVite(app, server);
       log("Vite setup complete");

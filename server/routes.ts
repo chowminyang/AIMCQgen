@@ -1,18 +1,41 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { requireAuth } from "./auth";
+import { db } from "@db";
+import { mcqs } from "@db/schema";
+import { desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
-  // Simple authentication middleware
-  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mcq-authenticated') {
-      return res.status(401).json({ message: "Not authorized" });
+  // Create MCQ
+  app.post("/api/mcqs", requireAuth, async (req, res) => {
+    try {
+      const { question, options, correctAnswer, topic } = req.body;
+      const newMcq = await db.insert(mcqs).values({
+        question,
+        options: JSON.stringify(options),
+        correctAnswer,
+        topic
+      }).returning();
+      res.json(newMcq[0]);
+    } catch (error: any) {
+      console.error('Create MCQ error:', error);
+      res.status(500).json({ message: error.message });
     }
-    next();
-  };
+  });
 
-  // Generate MCQ endpoint with auth
+  // Get all MCQs
+  app.get("/api/mcqs", requireAuth, async (req, res) => {
+    try {
+      const allMcqs = await db.select().from(mcqs)
+        .orderBy(desc(mcqs.createdAt));
+      res.json(allMcqs);
+    } catch (error: any) {
+      console.error('Fetch MCQs error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // MCQ Generation endpoint (protected)
   app.post("/api/mcq/generate", requireAuth, async (req, res) => {
     try {
       const { topic, purpose, referenceText } = req.body;
@@ -24,23 +47,31 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Save MCQ endpoint with auth
+  // Save MCQ endpoint (protected)
   app.post("/api/mcq/save", requireAuth, async (req, res) => {
     try {
       const { topic, purpose, referenceText, generatedText, editedText } = req.body;
-      // TODO: Implement MCQ saving
-      res.status(501).json({ message: "MCQ saving not implemented yet" });
+      const newMcq = await db.insert(mcqs).values({
+        topic,
+        purpose,
+        referenceText,
+        generatedText,
+        editedText,
+        saved: true
+      }).returning();
+
+      res.json(newMcq[0]);
     } catch (error: any) {
       console.error('Save MCQ error:', error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Get MCQ history endpoint with auth
+  // Get MCQ history endpoint (protected)
   app.get("/api/mcq/history", requireAuth, async (req, res) => {
     try {
-      // TODO: Implement MCQ history
-      res.json([]);
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.createdAt));
+      res.json(mcqHistory);
     } catch (error: any) {
       console.error('MCQ history error:', error);
       res.status(500).json({ message: error.message });

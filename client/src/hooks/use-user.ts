@@ -58,22 +58,26 @@ async function fetchUser(): Promise<User | null> {
     return null;
   }
 
-  const response = await fetch('/api/user', {
-    headers: {
-      "Authorization": `Bearer ${auth}`
-    }
-  });
+  try {
+    const response = await fetch('/api/user', {
+      headers: {
+        "Authorization": `Bearer ${auth}`
+      }
+    });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('auth');
-      return null;
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('auth');
+        return null;
+      }
+      throw new Error(`${response.status}: ${await response.text()}`);
     }
 
-    throw new Error(`${response.status}: ${await response.text()}`);
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return null;
   }
-
-  return response.json();
 }
 
 export function useUser() {

@@ -1,18 +1,31 @@
-import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
-export const mcqs = pgTable("mcqs", {
+// Users table for simplified authentication
+export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  topic: text("topic").notNull(),
-  purpose: text("purpose").notNull(),
-  referenceText: text("reference_text"),
-  generatedText: text("generated_text").notNull(),
-  editedText: text("edited_text"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  saved: boolean("saved").default(false).notNull(),
+  password: text("password").notNull(),
 });
 
+// MCQs table for storing questions
+export const mcqs = pgTable("mcqs", {
+  id: serial("id").primaryKey(),
+  question: text("question").notNull(),
+  options: text("options").notNull(), // Stored as JSON string
+  correctAnswer: text("correct_answer").notNull(),
+  topic: text("topic").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// Schema validations
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
 export const insertMcqSchema = createInsertSchema(mcqs);
 export const selectMcqSchema = createSelectSchema(mcqs);
+
+// Types
+export type InsertUser = typeof users.$inferInsert;
+export type SelectUser = typeof users.$inferSelect;
 export type InsertMcq = typeof mcqs.$inferInsert;
 export type SelectMcq = typeof mcqs.$inferSelect;
