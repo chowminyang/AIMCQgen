@@ -7,20 +7,25 @@ const openai = new OpenAI();
 // MCQ generation prompt template
 const MCQ_PROMPT = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
-Please create a question following these guidelines and format your response as a JSON object with these exact fields:
-{
-  "clinicalScenario": "string containing the scenario",
-  "question": "string containing the question",
-  "options": {
-    "A": "string for option A",
-    "B": "string for option B",
-    "C": "string for option C",
-    "D": "string for option D",
-    "E": "string for option E"
-  },
-  "correctAnswer": "string with letter A-E",
-  "feedback": "string containing feedback"
-}
+Please create a question following these guidelines and provide your response in the following structured format:
+
+Clinical Scenario:
+[Your 200-word clinical scenario]
+
+Question:
+[Your second-order thinking question]
+
+Options:
+A. [Option A]
+B. [Option B]
+C. [Option C]
+D. [Option D]
+E. [Option E]
+
+Correct Answer: [Letter A-E]
+
+Feedback:
+[Your feedback]
 
 Guidelines for creation:
 1. Clinical Scenario:
@@ -45,6 +50,45 @@ Guidelines for creation:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.`;
 
+function parseResponse(text: string): {
+  clinicalScenario: string;
+  question: string;
+  options: { A: string; B: string; C: string; D: string; E: string };
+  correctAnswer: string;
+  feedback: string;
+} {
+  // Extract sections using regex
+  const clinicalScenarioMatch = text.match(/Clinical Scenario:\s*([\s\S]*?)(?=\n\s*Question:)/);
+  const questionMatch = text.match(/Question:\s*([\s\S]*?)(?=\n\s*Options:)/);
+  const optionsMatch = text.match(/Options:\s*([\s\S]*?)(?=\n\s*Correct Answer:)/);
+  const correctAnswerMatch = text.match(/Correct Answer:\s*([A-E])/);
+  const feedbackMatch = text.match(/Feedback:\s*([\s\S]*?)$/);
+
+  if (!clinicalScenarioMatch || !questionMatch || !optionsMatch || !correctAnswerMatch || !feedbackMatch) {
+    throw new Error("Failed to parse response format");
+  }
+
+  // Parse options
+  const optionsText = optionsMatch[1];
+  const optionEntries = optionsText.match(/[A-E]\.\s*([\s\S]*?)(?=\s*[A-E]\.|$)/g) || [];
+  const options: { [key: string]: string } = {
+    A: "", B: "", C: "", D: "", E: ""
+  };
+
+  optionEntries.forEach(option => {
+    const [letter, ...content] = option.split('.');
+    options[letter.trim()] = content.join('.').trim();
+  });
+
+  return {
+    clinicalScenario: clinicalScenarioMatch[1].trim(),
+    question: questionMatch[1].trim(),
+    options: options as { A: string; B: string; C: string; D: string; E: string },
+    correctAnswer: correctAnswerMatch[1].trim(),
+    feedback: feedbackMatch[1].trim()
+  };
+}
+
 export function registerRoutes(app: Express): Server {
   app.post("/api/mcq/generate", async (req, res) => {
     try {
@@ -52,7 +96,7 @@ export function registerRoutes(app: Express): Server {
 
       const userPrompt = `${MCQ_PROMPT}\n\nTopic: ${topic}\nPurpose: ${purpose}\n${
         referenceText ? `Reference Material:\n${referenceText}` : ""
-      }\n\nPlease generate an MCQ according to the guidelines above and ensure the output is in the specified JSON format.`;
+      }\n\nPlease generate an MCQ following the format exactly as shown above.`;
 
       const response = await openai.chat.completions.create({
         model: "o1-mini",
@@ -61,13 +105,12 @@ export function registerRoutes(app: Express): Server {
         ],
       });
 
-      // Assert that content exists and parse it
       const content = response.choices[0].message.content;
       if (!content) {
         throw new Error("No content received from OpenAI");
       }
 
-      const mcq = JSON.parse(content);
+      const mcq = parseResponse(content);
       res.json(mcq);
     } catch (error: any) {
       res.status(500).send(error.message);
