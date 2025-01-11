@@ -19,8 +19,10 @@ import { Loader2 } from "lucide-react";
 import { MCQDisplay } from "@/components/mcq-display";
 import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { MCQEditForm } from "@/components/mcq-edit-form";
-import { generateMCQ } from "@/lib/api";
-import type { ParsedMCQ } from "@/types";
+import { MCQHistory } from "@/components/mcq-history";
+import { generateMCQ, getMCQHistory } from "@/lib/api";
+import type { ParsedMCQ, MCQHistoryItem } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
@@ -35,6 +37,11 @@ export default function Home() {
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [currentTopic, setCurrentTopic] = useState<string>("");
+
+  const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
+    queryKey: ['/api/mcq/history'],
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -46,11 +53,28 @@ export default function Home() {
 
   const onGenerate = async (data: FormData) => {
     setIsGenerating(true);
+    setCurrentTopic(data.topic);
     try {
       const result = await generateMCQ(data);
       setGeneratedMCQ(result.raw);
       setParsedMCQ(result.parsed);
       setShowEditor(true);
+
+      // Save to database
+      await fetch('/api/mcq/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: data.topic,
+          referenceText: data.referenceText,
+          generatedText: result.raw,
+        }),
+      });
+
+      // Refresh history
+      refetchHistory();
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       toast({
@@ -178,6 +202,18 @@ export default function Home() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* MCQ History */}
+          {mcqHistory.length > 0 && (
+            <Card className="w-full max-w-4xl mx-auto">
+              <CardHeader>
+                <CardTitle>MCQ Library</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MCQHistory items={mcqHistory} />
+              </CardContent>
+            </Card>
           )}
         </div>
       </main>

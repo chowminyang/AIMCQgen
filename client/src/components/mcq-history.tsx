@@ -67,9 +67,6 @@ export function MCQHistory({ items }: MCQHistoryProps) {
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2">
-              <div>
-                <span className="font-medium">Purpose:</span> {item.purpose}
-              </div>
               {item.referenceText && (
                 <div>
                   <span className="font-medium">Reference:</span>

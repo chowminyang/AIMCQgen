@@ -78,8 +78,7 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      // Parse the generated content using GPT-4o
-      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly.
+      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly:
 
 {
   "clinicalScenario": "The clinical scenario text here",
@@ -116,7 +115,6 @@ ${generatedContent}`;
       }
 
       try {
-        // Clean up the response by removing any markdown code block markers
         const cleanedContent = parsedContent
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')
@@ -134,35 +132,18 @@ ${generatedContent}`;
       }
     } catch (error: any) {
       console.error('MCQ generation error:', error);
-      if (error.response?.status === 400) {
-        res.status(400).send(error.response.data.error.message || "Invalid request to OpenAI API");
-      } else {
-        res.status(500).send(error.message || "Failed to generate MCQ");
-      }
+      res.status(500).send(error.message || "Failed to generate MCQ");
     }
   });
 
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const validationResult = mcqSchema.safeParse({
-        topic: req.body.topic,
-        generated_text: req.body.generatedText
-      });
-
-      if (!validationResult.success) {
-        console.error('Validation errors:', validationResult.error.errors);
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: validationResult.error.errors 
-        });
-      }
-
-      const mcqData = validationResult.data;
+      const { topic, referenceText, generatedText } = req.body;
 
       const [newMcq] = await db.insert(mcqs).values({
-        topic: mcqData.topic,
-        generated_text: mcqData.generated_text
+        topic,
+        generated_text: generatedText,
       }).returning();
 
       res.json(newMcq);
@@ -172,6 +153,7 @@ ${generatedContent}`;
     }
   });
 
+  // Get MCQ history endpoint
   app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));

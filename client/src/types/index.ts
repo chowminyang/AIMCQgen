@@ -4,7 +4,8 @@ export interface MCQFormData {
 }
 
 export interface MCQResponse {
-  text: string;
+  raw: string;
+  parsed: ParsedMCQ;
 }
 
 export interface ParsedMCQ {
@@ -24,7 +25,6 @@ export interface ParsedMCQ {
 export interface MCQHistoryItem {
   id: number;
   topic: string;
-  referenceText: string | null;
-  generatedText: string;
-  createdAt: string;
+  generated_text: string;
+  created_at: string;
 }
