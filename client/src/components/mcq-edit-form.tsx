@@ -12,27 +12,56 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 import type { ParsedMCQ } from "@/types";
 
-const optionsSchema = z.object({
-  A: z.string().optional().default(""),
-  B: z.string().optional().default(""),
-  C: z.string().optional().default(""),
-  D: z.string().optional().default(""),
-  E: z.string().optional().default(""),
+// Make all fields optional in the form initially
+const formSchema = z.object({
+  clinicalScenario: z.string().optional(),
+  question: z.string().optional(),
+  options: z.object({
+    A: z.string().optional(),
+    B: z.string().optional(),
+    C: z.string().optional(),
+    D: z.string().optional(),
+    E: z.string().optional(),
+  }),
+  correctAnswer: z.string().optional(),
+  explanation: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Only validate required fields on submit
+  if (!data.clinicalScenario) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Clinical scenario is required",
+      path: ["clinicalScenario"],
+    });
+  }
+  if (!data.question) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Question is required",
+      path: ["question"],
+    });
+  }
+  if (!data.correctAnswer) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Correct answer is required",
+      path: ["correctAnswer"],
+    });
+  }
+  if (!data.explanation) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Explanation is required",
+      path: ["explanation"],
+    });
+  }
 });
 
-const mcqFormSchema = z.object({
-  clinicalScenario: z.string().min(1, "Clinical scenario is required"),
-  question: z.string().min(1, "Question is required"),
-  options: optionsSchema,
-  correctAnswer: z.string().min(1, "Correct answer is required"),
-  explanation: z.string().min(1, "Explanation is required"),
-});
-
-type MCQFormData = z.infer<typeof mcqFormSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 interface Props {
   mcq: ParsedMCQ;
@@ -41,10 +70,8 @@ interface Props {
 }
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
-  console.log("Initial MCQ data:", mcq); // Debug log
-
-  const form = useForm<MCQFormData>({
-    resolver: zodResolver(mcqFormSchema),
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       clinicalScenario: mcq.clinicalScenario || "",
       question: mcq.question || "",
@@ -60,121 +87,143 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
     },
   });
 
-  const onSubmit = (data: MCQFormData) => {
-    console.log("Form submission data:", data); // Debug log
-    onSave(data as ParsedMCQ);
+  const onSubmit = (data: FormData) => {
+    // Convert back to ParsedMCQ type
+    const submissionData: ParsedMCQ = {
+      clinicalScenario: data.clinicalScenario || "",
+      question: data.question || "",
+      options: {
+        A: data.options.A || "",
+        B: data.options.B || "",
+        C: data.options.C || "",
+        D: data.options.D || "",
+        E: data.options.E || "",
+      },
+      correctAnswer: data.correctAnswer || "",
+      explanation: data.explanation || "",
+    };
+    onSave(submissionData);
   };
 
   return (
-    <Card className="p-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="clinicalScenario"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Clinical Scenario</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter the clinical scenario..."
-                    className="min-h-[200px]"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <Card>
+      <CardHeader>
+        <CardTitle>Edit MCQ</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="clinicalScenario"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Clinical Scenario</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter clinical scenario..."
+                      className="min-h-[150px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="question"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Question</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter the question..."
-                    className="min-h-[100px]"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="question"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter question..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Options</h3>
-            {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => (
-              <FormField
-                key={letter}
-                control={form.control}
-                name={`options.${letter}`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Option {letter}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder={`Enter option ${letter}...`} 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ))}
-          </div>
+            <div className="space-y-4">
+              <h3 className="font-medium">Options</h3>
+              {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => (
+                <FormField
+                  key={letter}
+                  control={form.control}
+                  name={`options.${letter}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Option {letter}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder={`Enter option ${letter}...`}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
 
-          <FormField
-            control={form.control}
-            name="correctAnswer"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Correct Answer (A-E)</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter the correct answer letter..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="correctAnswer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Correct Answer</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter correct answer (A-E)..."
+                      maxLength={1}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="explanation"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Explanation</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter the explanation..."
-                    className="min-h-[150px]"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="explanation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Explanation</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter explanation..."
+                      className="min-h-[150px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </form>
-      </Form>
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
     </Card>
   );
 }

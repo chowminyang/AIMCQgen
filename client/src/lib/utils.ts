@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function parseMCQText(text: string): ParsedMCQ | null {
   try {
-    // Initialize the structure
+    // Initialize the structure with empty values
     const mcq: ParsedMCQ = {
       clinicalScenario: "",
       question: "",
@@ -23,56 +23,53 @@ export function parseMCQText(text: string): ParsedMCQ | null {
       explanation: "",
     };
 
-    // Split the text into sections
+    // Split by double newlines and process each section
     const sections = text.split('\n\n');
     let currentSection = '';
-    let isInOptions = false;
 
     for (const section of sections) {
-      if (section.startsWith('CLINICAL SCENARIO:')) {
-        currentSection = 'CLINICAL SCENARIO';
-        mcq.clinicalScenario = section.replace('CLINICAL SCENARIO:', '').trim();
-      } else if (section.startsWith('QUESTION:')) {
-        currentSection = 'QUESTION';
-        mcq.question = section.replace('QUESTION:', '').trim();
-      } else if (section.startsWith('OPTIONS:')) {
+      const trimmedSection = section.trim();
+
+      if (trimmedSection.startsWith('CLINICAL SCENARIO:')) {
+        mcq.clinicalScenario = trimmedSection.replace('CLINICAL SCENARIO:', '').trim();
+      } else if (trimmedSection.startsWith('QUESTION:')) {
+        mcq.question = trimmedSection.replace('QUESTION:', '').trim();
+      } else if (trimmedSection.startsWith('OPTIONS:')) {
+        // Process options in the next iterations
         currentSection = 'OPTIONS';
-        isInOptions = true;
-        // Don't set content yet, will process options individually
-      } else if (section.startsWith('CORRECT ANSWER:')) {
-        currentSection = 'CORRECT ANSWER';
-        isInOptions = false;
-        mcq.correctAnswer = section.replace('CORRECT ANSWER:', '').trim();
-      } else if (section.startsWith('EXPLANATION:')) {
-        currentSection = 'EXPLANATION';
-        isInOptions = false;
-        mcq.explanation = section.replace('EXPLANATION:', '').trim();
-      } else if (isInOptions) {
-        // Process options
-        const lines = section.trim().split('\n');
-        lines.forEach(line => {
-          const match = line.match(/^([A-E])\)(.*)/);
-          if (match) {
-            const [, letter, content] = match;
+      } else if (trimmedSection.startsWith('CORRECT ANSWER:')) {
+        mcq.correctAnswer = trimmedSection.replace('CORRECT ANSWER:', '').trim();
+        currentSection = '';
+      } else if (trimmedSection.startsWith('EXPLANATION:')) {
+        mcq.explanation = trimmedSection.replace('EXPLANATION:', '').trim();
+        currentSection = '';
+      } else if (currentSection === 'OPTIONS') {
+        // Process options line by line
+        const lines = trimmedSection.split('\n');
+        for (const line of lines) {
+          const optionMatch = line.match(/^([A-E])\)(.*)/);
+          if (optionMatch) {
+            const [, letter, content] = optionMatch;
             mcq.options[letter as keyof typeof mcq.options] = content.trim();
           }
-        });
+        }
       }
     }
 
-    // Validate that we have all required fields
+    // Basic validation
     if (!mcq.clinicalScenario || !mcq.question || !mcq.correctAnswer || !mcq.explanation) {
-      console.error('Missing required MCQ fields');
+      console.log('Missing required fields:', { mcq });
       return null;
     }
 
-    // Validate that we have all options
-    const hasAllOptions = Object.values(mcq.options).every(option => option.length > 0);
-    if (!hasAllOptions) {
-      console.error('Missing one or more options');
+    // Ensure all options have some content
+    const hasOptions = Object.values(mcq.options).some(option => option.length > 0);
+    if (!hasOptions) {
+      console.log('No options found:', { mcq });
       return null;
     }
 
+    console.log('Successfully parsed MCQ:', { mcq });
     return mcq;
   } catch (error) {
     console.error('Error parsing MCQ text:', error);
