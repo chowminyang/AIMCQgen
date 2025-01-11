@@ -46,27 +46,7 @@ Please follow these steps to create the question:
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}
-
-Format your response in the following structure, using clear section headers:
-
-CLINICAL SCENARIO:
-[Your clinical scenario here]
-
-QUESTION:
-[Your question here]
-
-OPTIONS:
-A) [First option]
-B) [Second option]
-C) [Third option]
-D) [Fourth option]
-E) [Fifth option]
-
-CORRECT ANSWER: [Single letter A-E]
-
-EXPLANATION:
-[Your detailed explanation here]`;
+   ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}`;
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
@@ -78,58 +58,50 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly:
+      // Parse the MCQ text directly using regular expressions
+      const sections = {
+        clinicalScenario: "",
+        question: "",
+        options: {
+          A: "",
+          B: "",
+          C: "",
+          D: "",
+          E: ""
+        },
+        correctAnswer: "",
+        explanation: ""
+      };
 
-{
-  "clinicalScenario": "The clinical scenario text here",
-  "question": "The question text here",
-  "options": {
-    "A": "Option A text",
-    "B": "Option B text",
-    "C": "Option C text",
-    "D": "Option D text",
-    "E": "Option E text"
-  },
-  "correctAnswer": "A single letter (A-E)",
-  "explanation": "The explanation text here"
-}
+      // Extract sections using regex
+      const clinicalScenarioMatch = generatedContent.match(/CLINICAL SCENARIO:([^]*?)(?=QUESTION:|$)/i);
+      const questionMatch = generatedContent.match(/QUESTION:([^]*?)(?=OPTIONS:|$)/i);
+      const optionsMatch = generatedContent.match(/OPTIONS:([^]*?)(?=CORRECT ANSWER:|$)/i);
+      const correctAnswerMatch = generatedContent.match(/CORRECT ANSWER:([^]*?)(?=EXPLANATION:|$)/i);
+      const explanationMatch = generatedContent.match(/EXPLANATION:([^]*?)$/i);
 
-Here's the MCQ to parse:
-
-${generatedContent}`;
-
-      const parsedCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { 
-            role: "system", 
-            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Return only the raw JSON object without any markdown formatting, code blocks, or additional text." 
-          },
-          { role: "user", content: parsePrompt }
-        ]
-      });
-
-      const parsedContent = parsedCompletion.choices[0].message.content;
-      if (!parsedContent) {
-        throw new Error("Failed to parse MCQ content");
-      }
-
-      try {
-        const cleanedContent = parsedContent
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
-          .trim();
-
-        const parsedJson = JSON.parse(cleanedContent);
-        res.json({
-          raw: generatedContent,
-          parsed: parsedJson
+      if (clinicalScenarioMatch) sections.clinicalScenario = clinicalScenarioMatch[1].trim();
+      if (questionMatch) sections.question = questionMatch[1].trim();
+      if (optionsMatch) {
+        const optionsText = optionsMatch[1];
+        optionsText.split('\n').forEach(line => {
+          const optionMatch = line.match(/^([A-E])[).\s-]\s*(.+)/i);
+          if (optionMatch) {
+            const [, letter, text] = optionMatch;
+            sections.options[letter.toUpperCase()] = text.trim();
+          }
         });
-      } catch (parseError) {
-        console.error('JSON parsing error:', parseError);
-        console.error('Raw parsed content:', parsedContent);
-        throw new Error("Invalid JSON format received from parsing");
       }
+      if (correctAnswerMatch) {
+        const answer = correctAnswerMatch[1].trim().match(/[A-E]/i);
+        if (answer) sections.correctAnswer = answer[0].toUpperCase();
+      }
+      if (explanationMatch) sections.explanation = explanationMatch[1].trim();
+
+      res.json({
+        raw: generatedContent,
+        parsed: sections
+      });
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       res.status(500).send(error.message || "Failed to generate MCQ");

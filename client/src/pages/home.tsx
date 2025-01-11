@@ -15,7 +15,6 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function Home() {
   const { toast } = useToast();
-  const [generatedMCQ, setGeneratedMCQ] = useState<string | null>(null);
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -32,7 +31,6 @@ export default function Home() {
     setIsGenerating(true);
     try {
       const result = await generateMCQ(data);
-      setGeneratedMCQ(result.raw);
       setParsedMCQ(result.parsed);
       setShowEditor(false);
       setEditingMcqId(null);
@@ -43,7 +41,6 @@ export default function Home() {
         title: "Error",
         description: error.message || "Failed to generate MCQ",
       });
-      setGeneratedMCQ(null);
       setParsedMCQ(null);
     } finally {
       setIsGenerating(false);
@@ -51,13 +48,13 @@ export default function Home() {
   };
 
   const handleSaveToLibrary = async (name: string) => {
-    if (!parsedMCQ || !generatedMCQ) return;
+    if (!parsedMCQ) return;
 
     try {
       await saveMCQ({
         name,
         topic: "",
-        generatedText: generatedMCQ,
+        generatedText: JSON.stringify(parsedMCQ), 
         parsedData: parsedMCQ,
       });
 
@@ -66,6 +63,7 @@ export default function Home() {
         description: "MCQ has been saved to your library",
       });
       refetchHistory();
+      setShowSaveDialog(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -78,7 +76,6 @@ export default function Home() {
   const handleEditSaved = async (mcq: MCQHistoryItem) => {
     if (!mcq.parsed_data) return;
 
-    setGeneratedMCQ(mcq.generated_text);
     setParsedMCQ(mcq.parsed_data);
     setEditingMcqId(mcq.id);
     setShowEditor(true);
@@ -87,15 +84,15 @@ export default function Home() {
   const handleSaveEdits = async (editedMCQ: ParsedMCQ) => {
     try {
       if (editingMcqId) {
-        // Updating existing MCQ
         await updateMCQ(editingMcqId, {
           name: mcqHistory.find(m => m.id === editingMcqId)?.name || "Edited MCQ",
-          generatedText: generatedMCQ || "",
+          generatedText: JSON.stringify(editedMCQ), 
           parsedData: editedMCQ,
         });
       }
 
       setParsedMCQ(editedMCQ);
+      setShowEditor(false);
       toast({
         title: "Success",
         description: "MCQ has been updated successfully",
@@ -141,9 +138,9 @@ export default function Home() {
           )}
 
           {/* Display Generated MCQ */}
-          {!isGenerating && !showEditor && generatedMCQ && (
+          {!isGenerating && !showEditor && parsedMCQ && (
             <div className="w-full max-w-4xl mx-auto space-y-4">
-              <MCQDisplay mcqText={generatedMCQ} />
+              <MCQDisplay mcq={parsedMCQ} />
               <div className="flex justify-center gap-4">
                 <Button onClick={() => setShowEditor(true)}>
                   Edit MCQ

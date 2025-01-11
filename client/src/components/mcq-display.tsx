@@ -3,17 +3,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { ParsedMCQ } from "@/types";
 
 interface MCQDisplayProps {
-  mcqText: string;
+  mcq: ParsedMCQ;
 }
 
-export function MCQDisplay({ mcqText }: MCQDisplayProps) {
+export function MCQDisplay({ mcq }: MCQDisplayProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
+  const formattedMCQ = `Clinical Scenario:
+${mcq.clinicalScenario}
+
+Question:
+${mcq.question}
+
+Options:
+A) ${mcq.options.A}
+B) ${mcq.options.B}
+C) ${mcq.options.C}
+D) ${mcq.options.D}
+E) ${mcq.options.E}
+
+Correct Answer: ${mcq.correctAnswer}
+
+Explanation:
+${mcq.explanation}`;
+
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(mcqText).then(() => {
+    navigator.clipboard.writeText(formattedMCQ).then(() => {
       setCopied(true);
       toast({
         title: "Copied to clipboard",
@@ -22,10 +41,6 @@ export function MCQDisplay({ mcqText }: MCQDisplayProps) {
       setTimeout(() => setCopied(false), 2000);
     });
   };
-
-  // Split the text into sections
-  //This section is removed because the edited code doesn't use it.
-  // const sections = mcqText.split('\n\n');
 
   return (
     <Card className="w-full">
@@ -43,9 +58,37 @@ export function MCQDisplay({ mcqText }: MCQDisplayProps) {
 
       <CardContent className="space-y-6">
         <div className="rounded-lg bg-muted/50 p-4">
-          <pre className="text-sm whitespace-pre-wrap font-sans">
-            {mcqText}
-          </pre>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold mb-2">Clinical Scenario</h3>
+              <p className="whitespace-pre-wrap">{mcq.clinicalScenario}</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Question</h3>
+              <p className="whitespace-pre-wrap">{mcq.question}</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Options</h3>
+              {Object.entries(mcq.options).map(([letter, text]) => (
+                <div key={letter} className="ml-4 mb-2">
+                  <span className="font-medium">{letter}) </span>
+                  {text}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Correct Answer</h3>
+              <p>{mcq.correctAnswer}</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Explanation</h3>
+              <p className="whitespace-pre-wrap">{mcq.explanation}</p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
