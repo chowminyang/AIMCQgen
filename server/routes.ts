@@ -1,10 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { mcqs, mcqSchema, type InsertMcq } from "@db/schema";
+import { mcqs, mcqSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import PDFDocument from "pdfkit";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -81,49 +80,7 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      // Parse the text response into sections
-      const sections = generatedContent.split('\n\n');
-      const mcqResponse = {
-        text: generatedContent,
-        mcq: {
-          clinicalScenario: '',
-          question: '',
-          options: {
-            A: '',
-            B: '',
-            C: '',
-            D: '',
-            E: ''
-          },
-          correctAnswer: '',
-          explanation: ''
-        }
-      };
-
-      let currentSection = '';
-      for (const section of sections) {
-        if (section.startsWith('CLINICAL SCENARIO:')) {
-          mcqResponse.mcq.clinicalScenario = section.replace('CLINICAL SCENARIO:', '').trim();
-        } else if (section.startsWith('QUESTION:')) {
-          mcqResponse.mcq.question = section.replace('QUESTION:', '').trim();
-        } else if (section.startsWith('OPTIONS:')) {
-          const optionsText = section.replace('OPTIONS:', '').trim();
-          const optionsLines = optionsText.split('\n');
-          for (const line of optionsLines) {
-            const match = line.match(/^([A-E])\)\s(.+)$/);
-            if (match) {
-              const [, letter, text] = match;
-              mcqResponse.mcq.options[letter as keyof typeof mcqResponse.mcq.options] = text.trim();
-            }
-          }
-        } else if (section.startsWith('CORRECT ANSWER:')) {
-          mcqResponse.mcq.correctAnswer = section.replace('CORRECT ANSWER:', '').trim();
-        } else if (section.startsWith('EXPLANATION:')) {
-          mcqResponse.mcq.explanation = section.replace('EXPLANATION:', '').trim();
-        }
-      }
-
-      res.json(mcqResponse);
+      res.json({ text: generatedContent });
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       res.status(500).json({ message: error.message || "Failed to generate MCQ" });
@@ -148,11 +105,7 @@ EXPLANATION:
 
       const [newMcq] = await db.insert(mcqs).values({
         topic: mcqData.topic,
-        clinical_scenario: mcqData.clinical_scenario,
-        question: mcqData.question,
-        options: mcqData.options,
-        correct_answer: mcqData.correct_answer,
-        explanation: mcqData.explanation,
+        generatedText: mcqData.generatedText, // Assuming generatedText field exists in schema
       }).returning();
 
       res.json(newMcq);
@@ -194,25 +147,8 @@ EXPLANATION:
 
         doc.fontSize(16).text(`Topic: ${mcq.topic}`, { underline: true });
         doc.moveDown();
-        doc.fontSize(12).text(mcq.clinical_scenario);
+        doc.fontSize(12).text(mcq.generatedText);
         doc.moveDown();
-
-        doc.fontSize(14).text('Question:', { underline: true });
-        doc.fontSize(12).text(mcq.question);
-        doc.moveDown();
-
-        doc.fontSize(14).text('Options:', { underline: true });
-        Object.entries(mcq.options).forEach(([key, value]) => {
-          doc.fontSize(12).text(`${key}. ${value}`);
-        });
-        doc.moveDown();
-
-        doc.fontSize(14).text('Correct Answer:', { underline: true });
-        doc.fontSize(12).text(mcq.correct_answer);
-        doc.moveDown();
-
-        doc.fontSize(14).text('Explanation:', { underline: true });
-        doc.fontSize(12).text(mcq.explanation);
       });
 
       doc.end();

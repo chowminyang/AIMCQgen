@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { MCQResponse } from "@/types";
-import { cn } from "@/lib/utils";
 
 interface MCQDisplayProps {
   mcq: MCQResponse;
@@ -25,6 +24,17 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
     });
   };
 
+  // Split the text into sections based on headers
+  const sections = mcq.text.split('\n\n').reduce((acc: Record<string, string>, section) => {
+    const headerMatch = section.match(/^(CLINICAL SCENARIO|QUESTION|OPTIONS|CORRECT ANSWER|EXPLANATION):/i);
+    if (headerMatch) {
+      const header = headerMatch[1].toUpperCase();
+      const content = section.replace(/^.*?:/, '').trim();
+      acc[header] = content;
+    }
+    return acc;
+  }, {});
+
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -41,57 +51,56 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
 
       <CardContent className="space-y-6">
         {/* Clinical Scenario Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Clinical Scenario</h3>
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm whitespace-pre-wrap">{mcq.mcq.clinicalScenario}</p>
+        {sections['CLINICAL SCENARIO'] && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Clinical Scenario</h3>
+            <div className="rounded-lg bg-muted/50 p-4">
+              <p className="text-sm whitespace-pre-wrap">{sections['CLINICAL SCENARIO']}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Question Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Question</h3>
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm">{mcq.mcq.question}</p>
+        {sections['QUESTION'] && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Question</h3>
+            <div className="rounded-lg bg-muted/50 p-4">
+              <p className="text-sm">{sections['QUESTION']}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Options Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Options</h3>
-          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-            {Object.entries(mcq.mcq.options).map(([key, value]) => (
-              <div
-                key={key}
-                className={cn(
-                  "text-sm p-2 rounded",
-                  mcq.mcq.correctAnswer.trim() === key
-                    ? "bg-green-100 dark:bg-green-900/20"
-                    : "hover:bg-muted/50"
-                )}
-              >
-                <span className="font-semibold">{key}) </span>
-                {value}
-              </div>
-            ))}
+        {sections['OPTIONS'] && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Options</h3>
+            <div className="rounded-lg bg-muted/50 p-4">
+              <pre className="text-sm font-sans whitespace-pre-wrap">
+                {sections['OPTIONS']}
+              </pre>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Correct Answer Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Correct Answer</h3>
-          <div className="rounded-lg bg-green-100 dark:bg-green-900/20 p-4">
-            <p className="text-sm">Option {mcq.mcq.correctAnswer}</p>
+        {sections['CORRECT ANSWER'] && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Correct Answer</h3>
+            <div className="rounded-lg bg-green-100 dark:bg-green-900/20 p-4">
+              <p className="text-sm">Option {sections['CORRECT ANSWER']}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Explanation Section */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Explanation</h3>
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm whitespace-pre-wrap">{mcq.mcq.explanation}</p>
+        {sections['EXPLANATION'] && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Explanation</h3>
+            <div className="rounded-lg bg-muted/50 p-4">
+              <p className="text-sm whitespace-pre-wrap">{sections['EXPLANATION']}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Raw Text Section */}
         <div className="space-y-2">
