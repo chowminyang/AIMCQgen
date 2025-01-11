@@ -23,7 +23,8 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   console.log('Auth check - Session state:', {
     id: req.sessionID,
     authenticated: req.session.authenticated,
-    userId: req.session.userId
+    userId: req.session.userId,
+    cookie: req.session.cookie
   });
 
   if (!req.session.authenticated) {
@@ -69,7 +70,8 @@ export function setupAuth(app: Express) {
       console.log('Login successful - Session after login:', {
         id: req.sessionID,
         authenticated: req.session.authenticated,
-        userId: req.session.userId
+        userId: req.session.userId,
+        cookie: req.session.cookie
       });
 
       res.json({
@@ -87,7 +89,8 @@ export function setupAuth(app: Express) {
     console.log('User info check - Session state:', {
       id: req.sessionID,
       authenticated: req.session.authenticated,
-      userId: req.session.userId
+      userId: req.session.userId,
+      cookie: req.session.cookie
     });
 
     if (req.session.authenticated) {
@@ -102,6 +105,7 @@ export function setupAuth(app: Express) {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
+      res.clearCookie('mcq.sid');
       res.json({ message: "Logout successful" });
     });
   });

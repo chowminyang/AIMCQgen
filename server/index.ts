@@ -7,10 +7,28 @@ import createMemoryStore from "memorystore";
 
 const app = express();
 
-// Setup session middleware before any routes
+// Setup CORS for development first
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// Setup session middleware
 const MemoryStore = createMemoryStore(session);
 app.use(session({
   secret: process.env.REPL_ID || "mcq-session-secret",
+  name: 'mcq.sid', // Set a specific cookie name
   resave: false,
   saveUninitialized: false,
   store: new MemoryStore({
@@ -24,32 +42,24 @@ app.use(session({
   }
 }));
 
-// Basic middleware
+// Parse JSON and urlencoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// CORS for development
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
-
-// Logging middleware
+// Debug logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  console.log(`[${new Date().toISOString()}] ${req.method} ${path} - Session:`, req.session);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${path}`);
+  console.log('Session:', {
+    id: req.sessionID,
+    authenticated: req.session.authenticated,
+    userId: req.session.userId,
+    cookie: req.session.cookie
+  });
+
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -70,6 +80,12 @@ app.use((req, res, next) => {
 
   next();
 });
+
+//Setup authentication
+// Register routes
+// Error handling middleware
+// Setup vite in development
+// Start server
 
 (async () => {
   try {
