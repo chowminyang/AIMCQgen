@@ -13,13 +13,13 @@ export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
-      const { topic, purpose, referenceText } = req.body;
+      const { topic, referenceText } = req.body;
 
       if (!topic) {
         return res.status(400).json({ message: "Topic is required" });
       }
 
-      const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+      const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "${topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
 Please follow these steps to create the question:
 
@@ -30,7 +30,7 @@ Please follow these steps to create the question:
    - Do not reveal the diagnosis or include investigations that immediately give away the answer.
 
 2. Question:
-   - Ensure the question tests at least second-order thinking.
+   - Test second-order thinking skills about ${topic}.
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
 
 3. Multiple Choice Options:
@@ -45,10 +45,6 @@ Please follow these steps to create the question:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
    ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}
-
-For this topic:
-Topic: ${topic}
-${referenceText ? `Reference text: ${referenceText}` : ''}
 
 Format your response in the following structure, using clear section headers:
 
@@ -124,39 +120,6 @@ EXPLANATION:
     } catch (error: any) {
       console.error('MCQ history error:', error);
       res.status(500).json({ message: error.message || "Failed to fetch MCQ history" });
-    }
-  });
-
-  app.get("/api/mcq/export-pdf", async (req, res) => {
-    try {
-      const allMcqs = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
-
-      const doc = new PDFDocument({
-        size: 'A4',
-        margin: 50,
-        bufferPages: true
-      });
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename=mcqs.pdf');
-
-      doc.pipe(res);
-
-      allMcqs.forEach((mcq, index) => {
-        if (index > 0) {
-          doc.addPage();
-        }
-
-        doc.fontSize(16).text(`Topic: ${mcq.topic}`, { underline: true });
-        doc.moveDown();
-        doc.fontSize(12).text(mcq.generated_text);
-        doc.moveDown();
-      });
-
-      doc.end();
-    } catch (error: any) {
-      console.error('PDF export error:', error);
-      res.status(500).json({ message: error.message || "Failed to export MCQs to PDF" });
     }
   });
 

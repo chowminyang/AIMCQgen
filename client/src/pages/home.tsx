@@ -22,7 +22,6 @@ import { generateMCQ } from "@/lib/api";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
-  purpose: z.string().min(1, "Purpose is required"),
   referenceText: z.string().optional(),
 });
 
@@ -37,7 +36,6 @@ export default function Home() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       topic: "",
-      purpose: "",
       referenceText: "",
     },
   });
@@ -80,20 +78,6 @@ export default function Home() {
                         <FormLabel>Topic</FormLabel>
                         <FormControl>
                           <Input placeholder="Enter MCQ topic..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="purpose"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Purpose</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter MCQ purpose..." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
