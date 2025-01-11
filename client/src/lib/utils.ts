@@ -23,53 +23,52 @@ export function parseMCQText(text: string): ParsedMCQ | null {
       explanation: "",
     };
 
-    // Clean up the text and split into sections
-    const cleanText = text.trim().replace(/\n{3,}/g, '\n\n');
-    const sections = cleanText.split(/\n\s*\n/).reduce((acc: Record<string, string>, section) => {
-      // More flexible header matching
-      const headerMatch = section.match(/^[*\s]*(?:CLINICAL SCENARIO|QUESTION|OPTIONS|CORRECT ANSWER|EXPLANATION)[:.\s]*/im);
-      if (headerMatch) {
-        const headerStart = headerMatch[0];
-        const header = headerStart.trim().split(':')[0].toUpperCase();
-        const content = section.slice(headerStart.length).trim();
-        acc[header] = content;
-        console.log(`Parsed section ${header}:`, content.substring(0, 50) + '...');
+    // Clean up the text
+    const cleanText = text
+      .replace(/\*\*/g, '') // Remove markdown bold markers
+      .trim()
+      .replace(/\n{3,}/g, '\n\n'); // Normalize multiple newlines
+
+    // Split into sections and process each section
+    const sections = cleanText.split(/\n\s*\n/);
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i].trim();
+
+      // Match section headers more flexibly
+      if (/^CLINICAL SCENARIO:?/i.test(section)) {
+        mcq.clinicalScenario = section.replace(/^CLINICAL SCENARIO:?/i, '').trim();
       }
-      return acc;
-    }, {});
+      else if (/^QUESTION:?/i.test(section)) {
+        mcq.question = section.replace(/^QUESTION:?/i, '').trim();
+      }
+      else if (/^OPTIONS:?/i.test(section)) {
+        const optionsText = section.replace(/^OPTIONS:?/i, '').trim();
+        const optionLines = optionsText.split('\n');
 
-    // Map sections to MCQ structure with detailed logging
-    mcq.clinicalScenario = sections['CLINICAL SCENARIO'] || '';
-    console.log('Clinical Scenario found:', !!mcq.clinicalScenario);
-
-    mcq.question = sections['QUESTION'] || '';
-    console.log('Question found:', !!mcq.question);
-
-    // Parse correct answer - handle various formats
-    const rawAnswer = sections['CORRECT ANSWER'] || '';
-    mcq.correctAnswer = rawAnswer.match(/[A-E]/i)?.[0].toUpperCase() || '';
-    console.log('Correct Answer found:', mcq.correctAnswer);
-
-    mcq.explanation = sections['EXPLANATION'] || '';
-    console.log('Explanation found:', !!mcq.explanation);
-
-    // Parse options with more flexible matching
-    if (sections['OPTIONS']) {
-      const optionsText = sections['OPTIONS'];
-      const optionLines = optionsText.split('\n');
-
-      optionLines.forEach(line => {
-        // Match options in format "A) text" or "A. text" or "A - text"
-        const match = line.match(/^([A-E])[\s\)\.-](.*)/i);
-        if (match) {
-          const [, letter, content] = match;
-          mcq.options[letter.toUpperCase() as keyof typeof mcq.options] = content.trim();
-          console.log(`Option ${letter} found:`, content.trim().substring(0, 30) + '...');
+        optionLines.forEach(line => {
+          const match = line.match(/^([A-E])[).:\s-]\s*(.+)/i);
+          if (match) {
+            const [, letter, content] = match;
+            mcq.options[letter.toUpperCase() as keyof typeof mcq.options] = content.trim();
+          }
+        });
+      }
+      else if (/^CORRECT ANSWER:?/i.test(section)) {
+        const answerMatch = section.match(/^CORRECT ANSWER:?\s*([A-E])/i);
+        if (answerMatch) {
+          mcq.correctAnswer = answerMatch[1].toUpperCase();
         }
-      });
+      }
+      else if (/^EXPLANATION:?/i.test(section) || /^CORRECT ANSWER AND FEEDBACK:?/i.test(section)) {
+        mcq.explanation = section
+          .replace(/^EXPLANATION:?/i, '')
+          .replace(/^CORRECT ANSWER AND FEEDBACK:?/i, '')
+          .trim();
+      }
     }
 
-    // Validate all required fields are present and log any missing ones
+    // Validate all required fields are present
     const missingFields = [];
     if (!mcq.clinicalScenario) missingFields.push('Clinical Scenario');
     if (!mcq.question) missingFields.push('Question');
@@ -80,15 +79,12 @@ export function parseMCQText(text: string): ParsedMCQ | null {
 
     if (missingFields.length > 0) {
       console.error('Missing required MCQ fields:', missingFields.join(', '));
-      console.error('Raw text:', text);
-      console.error('Parsed sections:', sections);
       return null;
     }
 
     return mcq;
   } catch (error) {
     console.error('Error parsing MCQ text:', error);
-    console.error('Raw text:', text);
     return null;
   }
 }
