@@ -12,22 +12,19 @@ export function setupAuth(app: Express) {
     try {
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
-        return res
-          .status(400)
-          .json({ message: "Invalid input: " + result.error.issues.map(i => i.message).join(", ") });
+        return res.status(400).json({ 
+          message: "Invalid input: " + result.error.issues.map(i => i.message).join(", ") 
+        });
       }
 
       const { password } = result.data;
-
-      if (password.toUpperCase() !== FIXED_PASSWORD) {
+      if (password !== FIXED_PASSWORD) {
         return res.status(401).json({ message: "Incorrect password" });
       }
 
-      // Return success with a token
       res.json({
         message: "Login successful",
-        user: { id: 1 },
-        token: 'authenticated'
+        token: 'mcq-authenticated'
       });
     } catch (error: any) {
       console.error('Login error:', error);
@@ -41,7 +38,7 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'authenticated') {
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mcq-authenticated') {
       return res.status(401).json({ message: "Not logged in" });
     }
     res.json({ id: 1 });

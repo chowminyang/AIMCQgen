@@ -6,8 +6,7 @@ export function registerRoutes(app: Express): Server {
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 
-    // Check if auth header matches the token from successful login
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'authenticated') {
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mcq-authenticated') {
       return res.status(401).json({ message: "Not authorized" });
     }
     next();
