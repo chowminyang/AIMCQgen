@@ -14,6 +14,7 @@ export const mcqs = pgTable("mcqs", {
   id: serial("id").primaryKey(),
   topic: text("topic").notNull(),
   generated_text: text("generated_text").notNull(),
+  reference_text: text("reference_text"),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -21,6 +22,7 @@ export const mcqs = pgTable("mcqs", {
 export const mcqSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   generated_text: z.string().min(1, "Generated text is required"),
+  reference_text: z.string().optional(),
 });
 
 export const insertUserSchema = createInsertSchema(users);

@@ -46,7 +46,7 @@ export function MCQHistory({ items }: MCQHistoryProps) {
             <div className="flex-1 text-left">
               <div className="font-medium">{item.topic}</div>
               <div className="text-sm text-muted-foreground">
-                {format(new Date(item.createdAt), "PPp")}
+                {format(new Date(item.created_at), "PPpp")}
               </div>
             </div>
             <Button
@@ -55,7 +55,7 @@ export function MCQHistory({ items }: MCQHistoryProps) {
               className="h-8 w-8"
               onClick={(e) => {
                 e.stopPropagation();
-                copyToClipboard(item.generatedText, item.id);
+                copyToClipboard(item.generated_text, item.id);
               }}
             >
               {copiedId === item.id ? (
@@ -67,16 +67,16 @@ export function MCQHistory({ items }: MCQHistoryProps) {
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2">
-              {item.referenceText && (
+              {item.reference_text && (
                 <div>
                   <span className="font-medium">Reference:</span>
                   <pre className="mt-1 text-sm whitespace-pre-wrap">
-                    {item.referenceText}
+                    {item.reference_text}
                   </pre>
                 </div>
               )}
               <div className="mt-4">
-                <pre className="whitespace-pre-wrap text-sm">{item.generatedText}</pre>
+                <pre className="whitespace-pre-wrap text-sm">{item.generated_text}</pre>
               </div>
             </div>
           </AccordionContent>
