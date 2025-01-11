@@ -53,11 +53,6 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
     },
   });
 
-  console.log('MCQEditForm defaultValues:', {
-    ...mcq,
-    correctAnswer: mcq.correctAnswer.trim(),
-  });
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">

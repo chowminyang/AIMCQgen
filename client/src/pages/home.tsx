@@ -18,6 +18,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [generatedMCQ, setGeneratedMCQ] = useState<string | null>(null);
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
+  const [editedMCQ, setEditedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -54,20 +55,21 @@ export default function Home() {
   };
 
   const handleSaveEdits = async (editedMCQ: ParsedMCQ) => {
-    setParsedMCQ(editedMCQ);
+    console.log('Saving edits:', editedMCQ);
+    setEditedMCQ(editedMCQ);
     setShowSaveDialog(true);
   };
 
   const handleSaveMCQ = async (name: string) => {
-    if (!parsedMCQ || !generatedMCQ) return;
+    if (!editedMCQ) return;
 
     setIsSaving(true);
     try {
       await saveMCQ({
         name,
         topic: currentMCQTopic,
-        rawContent: generatedMCQ,
-        parsedContent: parsedMCQ,
+        rawContent: generatedMCQ || '',
+        parsedContent: editedMCQ,
       });
 
       toast({
@@ -79,6 +81,9 @@ export default function Home() {
       setShowSaveDialog(false);
       setShowEditor(false);
       setEditingMCQ(null);
+      setEditedMCQ(null);
+      setParsedMCQ(null);
+      setGeneratedMCQ(null);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -158,6 +163,7 @@ export default function Home() {
                   <MCQEditForm
                     mcq={parsedMCQ}
                     onSave={handleSaveEdits}
+                    isLoading={isSaving}
                   />
                   <Button
                     variant="outline"
@@ -166,6 +172,7 @@ export default function Home() {
                       setEditingMCQ(null);
                       setGeneratedMCQ(null);
                       setParsedMCQ(null);
+                      setEditedMCQ(null);
                     }}
                     className="mt-4"
                   >

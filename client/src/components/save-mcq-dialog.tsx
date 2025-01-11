@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { ParsedMCQ } from "@/types";
 
 interface SaveMCQDialogProps {
   open: boolean;
@@ -19,7 +18,12 @@ interface SaveMCQDialogProps {
   isLoading?: boolean;
 }
 
-export function SaveMCQDialog({ open, onOpenChange, onSave, isLoading }: SaveMCQDialogProps) {
+export function SaveMCQDialog({
+  open,
+  onOpenChange,
+  onSave,
+  isLoading,
+}: SaveMCQDialogProps) {
   const [name, setName] = useState("");
   const { toast } = useToast();
 
@@ -36,8 +40,16 @@ export function SaveMCQDialog({ open, onOpenChange, onSave, isLoading }: SaveMCQ
     onSave(name.trim());
   };
 
+  // Reset the name when the dialog opens
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setName("");
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Save MCQ</DialogTitle>
