@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MCQDisplay } from "@/components/mcq-display";
 import { MCQLoadingState } from "@/components/mcq-loading-state";
@@ -8,7 +9,6 @@ import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
 import { PasswordOverlay } from "@/components/password-overlay";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
-import { parseMCQText } from "@/lib/utils";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -19,26 +19,33 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [editingMCQ, setEditingMCQ] = useState<MCQHistoryItem | null>(null);
 
   const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated, // Only fetch history when authenticated
   });
 
   const onGenerate = async (data: MCQFormData) => {
     setIsGenerating(true);
     try {
       const result = await generateMCQ(data);
-      setGeneratedMCQ(result.generated);
+      setGeneratedMCQ(result.raw);
+      setParsedMCQ(result.parsed);
+      setShowEditor(true);
 
-      const parsed = parseMCQText(result.generated);
-      if (!parsed) {
-        throw new Error("Failed to parse generated MCQ");
-      }
-      setParsedMCQ(parsed);
-      setEditingMCQ(null);
-      setShowEditor(false);
+      await fetch('/api/mcq/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: data.topic,
+          referenceText: data.referenceText,
+          generatedText: result.raw,
+        }),
+      });
+
+      refetchHistory();
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       toast({
@@ -53,97 +60,12 @@ export default function Home() {
     }
   };
 
-  const handleSave = async (name: string) => {
-    if (!parsedMCQ) return;
-
-    try {
-      await fetch('/api/mcq/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          topic: editingMCQ?.topic || "General",
-          ...parsedMCQ,
-        }),
-      });
-
-      toast({
-        title: "Success",
-        description: "MCQ has been saved to your library",
-      });
-
-      refetchHistory();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to save MCQ",
-      });
-    }
-  };
-
-  const handleEdit = (mcq: MCQHistoryItem) => {
-    setEditingMCQ(mcq);
-    setParsedMCQ({
-      clinicalScenario: mcq.clinical_scenario,
-      question: mcq.question,
-      options: mcq.options,
-      correctAnswer: mcq.correct_answer,
-      explanation: mcq.explanation,
+  const handleSaveEdits = (editedMCQ: ParsedMCQ) => {
+    setParsedMCQ(editedMCQ);
+    toast({
+      title: "Success",
+      description: "MCQ has been updated successfully",
     });
-    setShowEditor(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await fetch(`/api/mcq/${id}`, { method: 'DELETE' });
-      toast({
-        title: "Success",
-        description: "MCQ has been deleted from your library",
-      });
-      refetchHistory();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to delete MCQ",
-      });
-    }
-  };
-
-  const handleSaveEdits = async (editedMCQ: ParsedMCQ) => {
-    if (!editingMCQ) return;
-
-    try {
-      await fetch(`/api/mcq/${editingMCQ.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...editedMCQ,
-          name: editingMCQ.name,
-          topic: editingMCQ.topic,
-        }),
-      });
-
-      toast({
-        title: "Success",
-        description: "MCQ has been updated successfully",
-      });
-
-      setShowEditor(false);
-      setEditingMCQ(null);
-      refetchHistory();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to update MCQ",
-      });
-    }
   };
 
   if (!isAuthenticated) {
@@ -177,12 +99,14 @@ export default function Home() {
           )}
 
           {/* Display Generated MCQ */}
-          {!isGenerating && generatedMCQ && !showEditor && (
+          {!isGenerating && !showEditor && generatedMCQ && (
             <div className="w-full max-w-4xl mx-auto">
-              <MCQDisplay 
-                mcqText={generatedMCQ} 
-                onSave={handleSave}
-              />
+              <MCQDisplay mcqText={generatedMCQ} />
+              <div className="mt-4 flex justify-center">
+                <Button onClick={() => setShowEditor(true)}>
+                  Edit MCQ
+                </Button>
+              </div>
             </div>
           )}
 
@@ -191,33 +115,36 @@ export default function Home() {
             <div className="w-full max-w-4xl mx-auto">
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    {editingMCQ ? `Editing: ${editingMCQ.name}` : "Edit MCQ"}
-                  </CardTitle>
+                  <CardTitle>Edit MCQ</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <MCQEditForm
                     mcq={parsedMCQ}
-                    onSave={editingMCQ ? handleSaveEdits : undefined}
+                    onSave={handleSaveEdits}
                   />
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEditor(false)}
+                    className="mt-4"
+                  >
+                    Back to View
+                  </Button>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* MCQ Library */}
-          <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle>MCQ Library</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MCQHistory 
-                items={mcqHistory} 
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            </CardContent>
-          </Card>
+          {/* MCQ History */}
+          {mcqHistory.length > 0 && (
+            <Card className="w-full max-w-4xl mx-auto">
+              <CardHeader>
+                <CardTitle>MCQ Library</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MCQHistory items={mcqHistory} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>
