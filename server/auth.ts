@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -36,26 +36,30 @@ declare global {
 }
 
 export async function createInitialUsers() {
-  // Create master and test users if they don't exist
   const initialUsers = [
     { username: "master", password: "master123", isMaster: true },
     { username: "user1", password: "user1pass", isMaster: false },
-    { username: "user2", password: "user2pass", isMaster: false },
-    { username: "user3", password: "user3pass", isMaster: false },
   ];
 
   for (const userData of initialUsers) {
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.username, userData.username),
-    });
-
-    if (!existingUser) {
-      const hashedPassword = await crypto.hash(userData.password);
-      await db.insert(users).values({
-        username: userData.username,
-        password: hashedPassword,
-        isMaster: userData.isMaster,
+    try {
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.username, userData.username.toLowerCase()),
       });
+
+      if (!existingUser) {
+        const hashedPassword = await crypto.hash(userData.password);
+        await db.insert(users).values({
+          username: userData.username.toLowerCase(),
+          password: hashedPassword,
+          isMaster: userData.isMaster,
+        });
+        console.log(`Created user: ${userData.username}`);
+      } else {
+        console.log(`User ${userData.username} already exists`);
+      }
+    } catch (error) {
+      console.error(`Error creating user ${userData.username}:`, error);
     }
   }
 }
@@ -63,7 +67,7 @@ export async function createInitialUsers() {
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "porygon-supremacy",
+    secret: process.env.REPL_ID || "mcq-platform-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {},
@@ -87,16 +91,18 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await db.query.users.findFirst({
-          where: eq(users.username, username),
+          where: eq(users.username, username.toLowerCase()),
         });
 
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
         }
+
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -127,7 +133,7 @@ export function setupAuth(app: Express) {
         .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
     }
 
-    const cb = (err: any, user: Express.User | false, info: IVerifyOptions) => {
+    passport.authenticate("local", (err: any, user: Express.User | false, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
@@ -146,8 +152,7 @@ export function setupAuth(app: Express) {
           user: { id: user.id, username: user.username, isMaster: user.isMaster },
         });
       });
-    };
-    passport.authenticate("local", cb)(req, res, next);
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
@@ -155,7 +160,6 @@ export function setupAuth(app: Express) {
       if (err) {
         return res.status(500).send("Logout failed");
       }
-
       res.json({ message: "Logout successful" });
     });
   });
@@ -165,10 +169,9 @@ export function setupAuth(app: Express) {
       const { id, username, isMaster } = req.user;
       return res.json({ id, username, isMaster });
     }
-
     res.status(401).send("Not logged in");
   });
 
   // Create initial users
-  createInitialUsers().catch(console.error);
+  return createInitialUsers().catch(console.error);
 }

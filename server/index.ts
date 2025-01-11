@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "@db";
+import { setupAuth } from "./auth";
 
 const app = express();
 app.use(express.json());
@@ -38,27 +40,42 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    // Test database connection
+    await db.query.users.findMany();
+    log("Database connection successful");
 
-  // Error handling middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Setup authentication after database is confirmed working
+    setupAuth(app);
+    log("Authentication setup complete");
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    const server = registerRoutes(app);
 
-  // Setup vite in development after routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Server error:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      res.status(status).json({ message });
+    });
+
+    // Setup vite in development after routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+      log("Vite setup complete");
+    } else {
+      serveStatic(app);
+      log("Static serving setup complete");
+    }
+
+    // Start server
+    const PORT = 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
   }
-
-  // Start server
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
 })();
