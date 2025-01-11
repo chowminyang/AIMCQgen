@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MCQForm } from "@/components/mcq-form";
 import { MCQDisplay } from "@/components/mcq-display";
 import { MCQHistory } from "@/components/mcq-history";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -39,25 +40,32 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8">MCQ Generator</h1>
-
-      <div className="grid gap-8">
-        <div className="space-y-4">
-          <MCQForm onSubmit={handleSubmit} isLoading={mutation.isPending} />
+    <div className="min-h-screen bg-background">
+      <nav className="border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-bold">MCQ Generator</h1>
+          <ThemeToggle />
         </div>
+      </nav>
 
-        {mcq && currentFormData && (
+      <main className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="grid gap-8">
           <div className="space-y-4">
-            <MCQDisplay mcq={mcq} formData={currentFormData} />
+            <MCQForm onSubmit={handleSubmit} isLoading={mutation.isPending} />
           </div>
-        )}
 
-        <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">History</h2>
-          <MCQHistory items={history as MCQHistoryItem[]} />
+          {mcq && currentFormData && (
+            <div className="space-y-4">
+              <MCQDisplay mcq={mcq} formData={currentFormData} />
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">History</h2>
+            <MCQHistory items={history as MCQHistoryItem[]} />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
