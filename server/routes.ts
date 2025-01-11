@@ -70,7 +70,7 @@ EXPLANATION:
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }]
+        messages: [{ role: "user", content: prompt }],
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -78,58 +78,53 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly:
+      // Parse the text content using regex
+      const sections = {
+        clinicalScenario: '',
+        question: '',
+        options: {
+          A: '',
+          B: '',
+          C: '',
+          D: '',
+          E: ''
+        },
+        correctAnswer: '',
+        explanation: ''
+      };
 
-{
-  "clinicalScenario": "The clinical scenario text here",
-  "question": "The question text here",
-  "options": {
-    "A": "Option A text",
-    "B": "Option B text",
-    "C": "Option C text",
-    "D": "Option D text",
-    "E": "Option E text"
-  },
-  "correctAnswer": "A single letter (A-E)",
-  "explanation": "The explanation text here"
-}
+      // Extract clinical scenario
+      const scenarioMatch = generatedContent.match(/CLINICAL SCENARIO:\s*([\s\S]*?)(?=\n\s*QUESTION:)/i);
+      sections.clinicalScenario = scenarioMatch ? scenarioMatch[1].trim() : '';
 
-Here's the MCQ to parse:
+      // Extract question
+      const questionMatch = generatedContent.match(/QUESTION:\s*([\s\S]*?)(?=\n\s*OPTIONS:)/i);
+      sections.question = questionMatch ? questionMatch[1].trim() : '';
 
-${generatedContent}`;
-
-      const parsedCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { 
-            role: "system", 
-            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Return only the raw JSON object without any markdown formatting, code blocks, or additional text." 
-          },
-          { role: "user", content: parsePrompt }
-        ]
-      });
-
-      const parsedContent = parsedCompletion.choices[0].message.content;
-      if (!parsedContent) {
-        throw new Error("Failed to parse MCQ content");
-      }
-
-      try {
-        const cleanedContent = parsedContent
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
-          .trim();
-
-        const parsedJson = JSON.parse(cleanedContent);
-        res.json({
-          raw: generatedContent,
-          parsed: parsedJson
+      // Extract options
+      const optionsText = generatedContent.match(/OPTIONS:\s*([\s\S]*?)(?=\n\s*CORRECT ANSWER:)/i)?.[1] || '';
+      const optionsMatches = optionsText.match(/([A-E])\)\s*([^\n]+)/g);
+      if (optionsMatches) {
+        optionsMatches.forEach(match => {
+          const [, letter, text] = match.match(/([A-E])\)\s*(.+)/) || [];
+          if (letter && text) {
+            sections.options[letter] = text.trim();
+          }
         });
-      } catch (parseError) {
-        console.error('JSON parsing error:', parseError);
-        console.error('Raw parsed content:', parsedContent);
-        throw new Error("Invalid JSON format received from parsing");
       }
+
+      // Extract correct answer
+      const answerMatch = generatedContent.match(/CORRECT ANSWER:\s*([A-E])/i);
+      sections.correctAnswer = answerMatch ? answerMatch[1] : '';
+
+      // Extract explanation
+      const explanationMatch = generatedContent.match(/EXPLANATION:\s*([\s\S]*?)$/i);
+      sections.explanation = explanationMatch ? explanationMatch[1].trim() : '';
+
+      res.json({
+        raw: generatedContent,
+        parsed: sections
+      });
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       res.status(500).send(error.message || "Failed to generate MCQ");
@@ -139,11 +134,24 @@ ${generatedContent}`;
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, referenceText, generatedText } = req.body;
+      const {
+        topic,
+        clinical_scenario,
+        question,
+        options,
+        correct_answer,
+        explanation,
+        reference_text
+      } = req.body;
 
       const [newMcq] = await db.insert(mcqs).values({
         topic,
-        generated_text: generatedText,
+        clinical_scenario,
+        question,
+        options,
+        correct_answer,
+        explanation,
+        reference_text,
       }).returning();
 
       res.json(newMcq);
@@ -164,6 +172,7 @@ ${generatedContent}`;
     }
   });
 
+  // Get single MCQ endpoint
   app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);

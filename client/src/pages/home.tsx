@@ -37,6 +37,7 @@ export default function Home() {
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [currentTopic, setCurrentTopic] = useState<string>("");
 
   const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
@@ -59,22 +60,6 @@ export default function Home() {
       setGeneratedMCQ(result.raw);
       setParsedMCQ(result.parsed);
       setShowEditor(true);
-
-      // Save to database
-      await fetch('/api/mcq/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: data.topic,
-          referenceText: data.referenceText,
-          generatedText: result.raw,
-        }),
-      });
-
-      // Refresh history
-      refetchHistory();
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       toast({
@@ -86,6 +71,44 @@ export default function Home() {
       setParsedMCQ(null);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveToLibrary = async (mcq: ParsedMCQ) => {
+    setIsSaving(true);
+    try {
+      await fetch('/api/mcq/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: currentTopic,
+          clinical_scenario: mcq.clinicalScenario,
+          question: mcq.question,
+          options: mcq.options,
+          correct_answer: mcq.correctAnswer,
+          explanation: mcq.explanation,
+          reference_text: form.getValues().referenceText,
+        }),
+      });
+
+      toast({
+        title: "Success",
+        description: "MCQ has been saved to your library",
+      });
+
+      // Refresh history
+      refetchHistory();
+    } catch (error: any) {
+      console.error('Save MCQ error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save MCQ",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -192,13 +215,27 @@ export default function Home() {
                     mcq={parsedMCQ}
                     onSave={handleSaveEdits}
                   />
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowEditor(false)}
-                    className="mt-4"
-                  >
-                    Back to View
-                  </Button>
+                  <div className="mt-4 flex gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEditor(false)}
+                    >
+                      Back to View
+                    </Button>
+                    <Button
+                      onClick={() => handleSaveToLibrary(parsedMCQ)}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving to Library...
+                        </>
+                      ) : (
+                        "Save to Library"
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
