@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Check, Pencil, Trash } from "lucide-react";
+import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { MCQHistoryItem } from "@/types";
@@ -34,6 +34,68 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     });
   };
 
+  const handleExportXLSX = async () => {
+    try {
+      const response = await fetch('/api/mcq/export/xlsx', {
+        method: 'GET',
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mcq-library-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "MCQs exported to Excel successfully",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Failed to export MCQs to Excel",
+      });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const response = await fetch('/api/mcq/export/pdf', {
+        method: 'GET',
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mcq-library-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "MCQs exported to PDF successfully",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Failed to export MCQs to PDF",
+      });
+    }
+  };
+
   if (items.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -44,6 +106,25 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
 
   return (
     <>
+      <div className="mb-4 flex justify-end gap-2">
+        <Button 
+          variant="outline" 
+          onClick={handleExportXLSX}
+          className="flex items-center gap-2"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Export to Excel
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={handleExportPDF}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Export to PDF
+        </Button>
+      </div>
+
       <Accordion type="single" collapsible className="w-full">
         {items.map((item) => (
           <AccordionItem key={item.id} value={item.id.toString()}>

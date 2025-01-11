@@ -4,6 +4,9 @@ import { db } from "@db";
 import { mcqs, mcqSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
+import XLSX from "xlsx";
+import PDFDocument from "pdfkit";
+import type { PDFKit } from "pdfkit";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -229,6 +232,127 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Get MCQ error:', error);
       res.status(500).send(error.message || "Failed to fetch MCQ");
+    }
+  });
+
+  // Export to XLSX
+  app.get("/api/mcq/export/xlsx", async (req, res) => {
+    try {
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+
+      // Transform data for Excel
+      const data = mcqHistory.map(mcq => ({
+        Name: mcq.name,
+        Topic: mcq.topic,
+        'Clinical Scenario': mcq.parsed_content.clinicalScenario,
+        Question: mcq.parsed_content.question,
+        'Option A': mcq.parsed_content.options.A,
+        'Option B': mcq.parsed_content.options.B,
+        'Option C': mcq.parsed_content.options.C,
+        'Option D': mcq.parsed_content.options.D,
+        'Option E': mcq.parsed_content.options.E,
+        'Correct Answer': mcq.parsed_content.correctAnswer,
+        Explanation: mcq.parsed_content.explanation,
+        'Created At': new Date(mcq.created_at).toLocaleString(),
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "MCQs");
+
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=mcq-library.xlsx');
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('Export XLSX error:', error);
+      res.status(500).send(error.message || "Failed to export MCQs to Excel");
+    }
+  });
+
+  // Export to PDF
+  app.get("/api/mcq/export/pdf", async (req, res) => {
+    try {
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+
+      // Create PDF document
+      const doc = new PDFDocument();
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=mcq-library.pdf');
+
+      // Pipe PDF directly to response
+      doc.pipe(res);
+
+      // Add content
+      mcqHistory.forEach((mcq, index) => {
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        // Title and metadata with styling
+        doc.font('Helvetica-Bold').fontSize(16).text(mcq.name);
+        doc.font('Helvetica').fontSize(12).text(`Topic: ${mcq.topic}`);
+        doc.moveDown();
+
+        // Clinical Scenario
+        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Scenario');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.clinicalScenario, {
+          width: 500,
+          align: 'justify'
+        });
+        doc.moveDown();
+
+        // Question
+        doc.font('Helvetica-Bold').fontSize(14).text('Question');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.question, {
+          width: 500,
+          align: 'justify'
+        });
+        doc.moveDown();
+
+        // Options
+        doc.font('Helvetica-Bold').fontSize(14).text('Options');
+        Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
+          doc.font('Helvetica').fontSize(12).text(`${letter}) ${text}`, {
+            width: 500,
+            indent: 20
+          });
+        });
+        doc.moveDown();
+
+        // Correct Answer
+        doc.font('Helvetica-Bold').fontSize(14).text('Correct Answer');
+        doc.font('Helvetica').fontSize(12).text(`Option ${mcq.parsed_content.correctAnswer}`);
+        doc.moveDown();
+
+        // Explanation
+        doc.font('Helvetica-Bold').fontSize(14).text('Explanation');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.explanation, {
+          width: 500,
+          align: 'justify'
+        });
+
+        // Footer with creation date
+        doc.moveDown()
+          .font('Helvetica-Oblique')
+          .fontSize(10)
+          .text(`Created: ${new Date(mcq.created_at).toLocaleString()}`, {
+            align: 'right'
+          });
+      });
+
+      // End the document
+      doc.end();
+    } catch (error: any) {
+      console.error('Export PDF error:', error);
+      res.status(500).send(error.message || "Failed to export MCQs to PDF");
     }
   });
 
