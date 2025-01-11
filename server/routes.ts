@@ -20,7 +20,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "Topic and reference text are required" });
       }
 
-      // Embed the system prompt in the user message since o1-mini doesn't support system messages
       const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
 Please follow these steps to create the question:
@@ -36,7 +35,7 @@ Please follow these steps to create the question:
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
 
 3. Multiple Choice Options:
-   - Provide 5 options in alphabetical order:
+   - Provide 5 options (A-E) in alphabetical order:
      a) One best and correct answer
      b) One correct answer, but not the best option
      c-e) Plausible options that might be correct, but are not the best answer
@@ -48,37 +47,33 @@ Please follow these steps to create the question:
    - Provide option-specific explanations for why each option is correct or incorrect.
    - If a reference file was provided, cite relevant information from it in your explanations.
 
-5. Question Structure:
-   - Ensure the stem focuses on one specific idea or concept.
-   - Write the stem clearly and concisely.
-   - Include all necessary information and subtle clues within the stem itself.
-   - Avoid overt hints or cues that might lead quickly to the correct answer.
-
 For this topic and reference text:
 Topic: ${topic}
 Reference text: ${referenceText}
 
-Format your response as a JSON object with this structure:
-{
-  "mcq": {
-    "clinicalScenario": "scenario here",
-    "question": "question here",
-    "options": {
-      "A": "First option",
-      "B": "Second option",
-      "C": "Third option",
-      "D": "Fourth option",
-      "E": "Fifth option"
-    },
-    "correctAnswer": "letter of correct option (A-E)",
-    "explanation": "full explanation here"
-  }
-}`;
+Format your response in the following structure, using clear section headers:
+
+CLINICAL SCENARIO:
+[Your clinical scenario here]
+
+QUESTION:
+[Your question here]
+
+OPTIONS:
+A) [First option]
+B) [Second option]
+C) [Third option]
+D) [Fourth option]
+E) [Fifth option]
+
+CORRECT ANSWER: [Single letter A-E]
+
+EXPLANATION:
+[Your detailed explanation here]`;
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
+        messages: [{ role: "user", content: prompt }]
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -86,8 +81,47 @@ Format your response as a JSON object with this structure:
         throw new Error("No content generated");
       }
 
-      const result = JSON.parse(generatedContent);
-      res.json(result);
+      // Parse the text response into sections
+      const sections = generatedContent.split('\n\n');
+      const mcqResponse = {
+        mcq: {
+          clinicalScenario: '',
+          question: '',
+          options: {
+            A: '',
+            B: '',
+            C: '',
+            D: '',
+            E: ''
+          },
+          correctAnswer: '',
+          explanation: ''
+        }
+      };
+
+      let currentSection = '';
+      for (const section of sections) {
+        if (section.startsWith('CLINICAL SCENARIO:')) {
+          mcqResponse.mcq.clinicalScenario = section.replace('CLINICAL SCENARIO:', '').trim();
+        } else if (section.startsWith('QUESTION:')) {
+          mcqResponse.mcq.question = section.replace('QUESTION:', '').trim();
+        } else if (section.startsWith('OPTIONS:')) {
+          const optionsText = section.replace('OPTIONS:', '').trim();
+          const optionsLines = optionsText.split('\n');
+          for (const line of optionsLines) {
+            const match = line.match(/^([A-E])\)\s(.+)$/);
+            if (match) {
+              mcqResponse.mcq.options[match[1]] = match[2].trim();
+            }
+          }
+        } else if (section.startsWith('CORRECT ANSWER:')) {
+          mcqResponse.mcq.correctAnswer = section.replace('CORRECT ANSWER:', '').trim();
+        } else if (section.startsWith('EXPLANATION:')) {
+          mcqResponse.mcq.explanation = section.replace('EXPLANATION:', '').trim();
+        }
+      }
+
+      res.json(mcqResponse);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       res.status(500).json({ message: error.message || "Failed to generate MCQ" });
@@ -126,7 +160,6 @@ Format your response as a JSON object with this structure:
     }
   });
 
-  // Get MCQ history endpoint
   app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
@@ -137,7 +170,6 @@ Format your response as a JSON object with this structure:
     }
   });
 
-  // Export MCQs to PDF endpoint
   app.get("/api/mcq/export-pdf", async (req, res) => {
     try {
       const allMcqs = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
@@ -188,7 +220,6 @@ Format your response as a JSON object with this structure:
     }
   });
 
-  // Get single MCQ endpoint
   app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
