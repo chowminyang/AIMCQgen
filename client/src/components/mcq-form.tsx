@@ -17,7 +17,7 @@ import type { MCQFormData } from "@/types";
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   purpose: z.string().min(1, "Purpose is required"),
-  referenceText: z.string().optional(),
+  referenceText: z.string().optional().default(""),
 });
 
 interface MCQFormProps {
@@ -84,7 +84,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Generating..." : "Generate MCQ"}
         </Button>
       </form>

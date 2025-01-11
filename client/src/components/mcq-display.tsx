@@ -1,65 +1,21 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Copy, Save } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Textarea } from "@/components/ui/textarea";
 import type { MCQResponse } from "@/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 interface MCQDisplayProps {
   mcq: MCQResponse;
-  formData: {
-    topic: string;
-    purpose: string;
-    referenceText: string;
-  };
 }
 
-export function MCQDisplay({ mcq, formData }: MCQDisplayProps) {
+export function MCQDisplay({ mcq }: MCQDisplayProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  const [editedText, setEditedText] = useState(mcq.text);
-  const queryClient = useQueryClient();
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/mcq/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          generatedText: mcq.text,
-          editedText: editedText !== mcq.text ? editedText : null
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/mcq/history"] });
-      toast({
-        title: "MCQ saved",
-        description: "Your MCQ has been saved successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    },
-  });
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(editedText).then(() => {
+    navigator.clipboard.writeText(mcq.text).then(() => {
       setCopied(true);
       toast({
         title: "Copied to clipboard",
@@ -71,60 +27,80 @@ export function MCQDisplay({ mcq, formData }: MCQDisplayProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Generated MCQ</CardTitle>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={copyToClipboard}
-            className="h-8 w-8"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
-            className="h-8 w-8"
-          >
-            <Save className="h-4 w-4" />
-          </Button>
-        </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-xl font-bold">Generated MCQ</CardTitle>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={copyToClipboard}
+          className="h-8 w-8"
+        >
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Clinical Scenario</h3>
-          <p className="text-sm text-gray-700">{mcq.mcq.clinicalScenario}</p>
+
+      <CardContent className="space-y-6">
+        {/* Clinical Scenario Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Clinical Scenario</h3>
+          <div className="rounded-lg bg-muted/50 p-4">
+            <p className="text-sm whitespace-pre-wrap">{mcq.mcq.clinicalScenario}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Question</h3>
-          <p className="text-sm text-gray-700">{mcq.mcq.question}</p>
+
+        {/* Question Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Question</h3>
+          <div className="rounded-lg bg-muted/50 p-4">
+            <p className="text-sm">{mcq.mcq.question}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Options</h3>
-          {Object.entries(mcq.mcq.options).map(([key, value]) => (
-            <div key={key} className="text-sm text-gray-700">
-              {key}) {value}
-            </div>
-          ))}
+
+        {/* Options Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Options</h3>
+          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+            {Object.entries(mcq.mcq.options).map(([key, value]) => (
+              <div
+                key={key}
+                className={cn(
+                  "text-sm p-2 rounded",
+                  mcq.mcq.correctAnswer.trim() === key
+                    ? "bg-green-100 dark:bg-green-900/20"
+                    : "hover:bg-muted/50"
+                )}
+              >
+                <span className="font-semibold">{key}) </span>
+                {value}
+              </div>
+            ))}
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Correct Answer</h3>
-          <p className="text-sm text-gray-700">{mcq.mcq.correctAnswer}</p>
+
+        {/* Correct Answer Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Correct Answer</h3>
+          <div className="rounded-lg bg-green-100 dark:bg-green-900/20 p-4">
+            <p className="text-sm">Option {mcq.mcq.correctAnswer}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Explanation</h3>
-          <p className="text-sm text-gray-700">{mcq.mcq.explanation}</p>
+
+        {/* Explanation Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Explanation</h3>
+          <div className="rounded-lg bg-muted/50 p-4">
+            <p className="text-sm whitespace-pre-wrap">{mcq.mcq.explanation}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Raw Text (Editable)</h3>
-          <Textarea
-            value={editedText}
-            onChange={(e) => setEditedText(e.target.value)}
-            className="min-h-[300px] font-mono text-sm"
-          />
+
+        {/* Raw Text Section */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Raw Response</h3>
+          <div className="rounded-lg bg-muted/50 p-4">
+            <pre className="text-sm overflow-x-auto whitespace-pre-wrap font-mono">
+              {mcq.text}
+            </pre>
+          </div>
         </div>
       </CardContent>
     </Card>
