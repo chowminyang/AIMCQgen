@@ -16,36 +16,59 @@ import { Card } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 import type { ParsedMCQ } from "@/types";
 
+const optionsSchema = z.object({
+  A: z.string().optional().default(""),
+  B: z.string().optional().default(""),
+  C: z.string().optional().default(""),
+  D: z.string().optional().default(""),
+  E: z.string().optional().default(""),
+});
+
 const mcqFormSchema = z.object({
   clinicalScenario: z.string().min(1, "Clinical scenario is required"),
   question: z.string().min(1, "Question is required"),
-  options: z.object({
-    A: z.string().min(1, "Option A is required"),
-    B: z.string().min(1, "Option B is required"),
-    C: z.string().min(1, "Option C is required"),
-    D: z.string().min(1, "Option D is required"),
-    E: z.string().min(1, "Option E is required"),
-  }),
+  options: optionsSchema,
   correctAnswer: z.string().min(1, "Correct answer is required"),
   explanation: z.string().min(1, "Explanation is required"),
 });
 
-type Props = {
+type MCQFormData = z.infer<typeof mcqFormSchema>;
+
+interface Props {
   mcq: ParsedMCQ;
   onSave: (data: ParsedMCQ) => void;
   isLoading?: boolean;
-};
+}
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
-  const form = useForm<ParsedMCQ>({
+  console.log("Initial MCQ data:", mcq); // Debug log
+
+  const form = useForm<MCQFormData>({
     resolver: zodResolver(mcqFormSchema),
-    defaultValues: mcq,
+    defaultValues: {
+      clinicalScenario: mcq.clinicalScenario || "",
+      question: mcq.question || "",
+      options: {
+        A: mcq.options.A || "",
+        B: mcq.options.B || "",
+        C: mcq.options.C || "",
+        D: mcq.options.D || "",
+        E: mcq.options.E || "",
+      },
+      correctAnswer: mcq.correctAnswer || "",
+      explanation: mcq.explanation || "",
+    },
   });
+
+  const onSubmit = (data: MCQFormData) => {
+    console.log("Form submission data:", data); // Debug log
+    onSave(data as ParsedMCQ);
+  };
 
   return (
     <Card className="p-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="clinicalScenario"
@@ -82,22 +105,28 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
             )}
           />
 
-          {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => (
-            <FormField
-              key={letter}
-              control={form.control}
-              name={`options.${letter}`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Option {letter}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={`Enter option ${letter}...`} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ))}
+          <div className="space-y-4">
+            <h3 className="font-medium">Options</h3>
+            {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => (
+              <FormField
+                key={letter}
+                control={form.control}
+                name={`options.${letter}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Option {letter}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={`Enter option ${letter}...`} 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
+          </div>
 
           <FormField
             control={form.control}
