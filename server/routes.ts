@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
 import { desc } from "drizzle-orm";
+import { setupAuth } from "./auth";
 
 const openai = new OpenAI();
 
@@ -54,8 +55,15 @@ Guidelines for creation:
    - Provide option-specific explanations for why each option is correct or incorrect.`;
 
 export function registerRoutes(app: Express): Server {
+  // Setup authentication
+  setupAuth(app);
+
   // Generate MCQ endpoint
   app.post("/api/mcq/generate", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authorized");
+    }
+
     try {
       const { topic, purpose, referenceText } = req.body;
 
@@ -65,9 +73,7 @@ export function registerRoutes(app: Express): Server {
 
       const response = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [
-          { role: "user", content: userPrompt }
-        ],
+        messages: [{ role: "user", content: userPrompt }],
       });
 
       const content = response.choices[0].message.content;
@@ -75,24 +81,50 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content received from OpenAI");
       }
 
-      // Save the generated MCQ to the database
-      await db.insert(mcqs).values({
-        topic,
-        purpose,
-        referenceText: referenceText || null,
-        generatedText: content,
-      });
-
       res.json({ text: content });
     } catch (error: any) {
       res.status(500).send(error.message);
     }
   });
 
+  // Save MCQ endpoint
+  app.post("/api/mcq/save", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authorized");
+    }
+
+    try {
+      const { topic, purpose, referenceText, generatedText, editedText } = req.body;
+
+      const [mcq] = await db
+        .insert(mcqs)
+        .values({
+          userId: req.user.id,
+          topic,
+          purpose,
+          referenceText: referenceText || null,
+          generatedText,
+          editedText: editedText || null,
+          saved: true,
+        })
+        .returning();
+
+      res.json(mcq);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   // Get MCQ history endpoint
-  app.get("/api/mcq/history", async (_req, res) => {
+  app.get("/api/mcq/history", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authorized");
+    }
+
     try {
       const history = await db.query.mcqs.findMany({
+        where: (mcqs, { eq, and }) =>
+          and(eq(mcqs.userId, req.user.id), eq(mcqs.saved, true)),
         orderBy: [desc(mcqs.createdAt)],
       });
       res.json(history);

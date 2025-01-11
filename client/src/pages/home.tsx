@@ -5,16 +5,17 @@ import { MCQHistory } from "@/components/mcq-history";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import type { MCQFormData, MCQResponse, MCQHistoryItem } from "@/types"; // Assuming MCQHistoryItem type
+import type { MCQFormData, MCQResponse, MCQHistoryItem } from "@/types";
 
 export default function Home() {
   const { toast } = useToast();
   const [mcq, setMcq] = useState<MCQResponse | null>(null);
-  const queryClient = useQueryClient(); // Added queryClient
+  const [currentFormData, setCurrentFormData] = useState<MCQFormData | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: history = [] } = useQuery({
     queryKey: ["/api/mcq/history"],
-    queryFn: getMCQHistory, // Added queryFn
+    queryFn: getMCQHistory,
   });
 
   const mutation = useMutation({
@@ -33,6 +34,7 @@ export default function Home() {
   });
 
   const handleSubmit = (data: MCQFormData) => {
+    setCurrentFormData(data);
     mutation.mutate(data);
   };
 
@@ -45,15 +47,15 @@ export default function Home() {
           <MCQForm onSubmit={handleSubmit} isLoading={mutation.isPending} />
         </div>
 
-        {mcq && (
+        {mcq && currentFormData && (
           <div className="space-y-4">
-            <MCQDisplay mcq={mcq} />
+            <MCQDisplay mcq={mcq} formData={currentFormData} />
           </div>
         )}
 
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold">History</h2>
-          <MCQHistory items={history as MCQHistoryItem[]} /> {/* Type assertion */}
+          <MCQHistory items={history as MCQHistoryItem[]} />
         </div>
       </div>
     </div>
