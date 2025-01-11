@@ -115,7 +115,8 @@ EXPLANATION:
             });
             break;
           case "CORRECT ANSWER":
-            parsedContent.correctAnswer = sectionContent.trim();
+            // Extract just the letter from "CORRECT ANSWER: A" format
+            parsedContent.correctAnswer = sectionContent.trim().split(" ").pop() || "";
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
