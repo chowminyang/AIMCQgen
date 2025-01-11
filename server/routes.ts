@@ -9,17 +9,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export function registerRoutes(app: Express): Server {
-  // MCQ Generation endpoint
-  app.post("/api/mcq/generate", async (req, res) => {
-    try {
-      const { topic, referenceText } = req.body;
-
-      if (!topic) {
-        return res.status(400).send("Topic is required");
-      }
-
-      const prompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "${topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+// Store the current prompt in memory
+let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
 Please follow these steps to create the question:
 
@@ -30,7 +21,7 @@ Please follow these steps to create the question:
    - Do not reveal the diagnosis or include investigations that immediately give away the answer.
 
 2. Question:
-   - Test second-order thinking skills about ${topic}.
+   - Test second-order thinking skills about {topic}.
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
    - Do not reveal or hint at the diagnosis in the question.
    - Avoid including obvious investigations or management options that would immediately give away the answer.
@@ -46,7 +37,6 @@ Please follow these steps to create the question:
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}
 
 Return your response in this EXACT format with these EXACT section headers:
 
@@ -67,6 +57,37 @@ CORRECT ANSWER: [Single letter A-E]
 
 EXPLANATION:
 [Detailed explanation text]`;
+
+export function registerRoutes(app: Express): Server {
+  // Get current prompt
+  app.get("/api/prompt", async (req, res) => {
+    res.json({ prompt: currentPrompt });
+  });
+
+  // Update prompt
+  app.post("/api/prompt", async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).send("Prompt is required");
+    }
+
+    currentPrompt = prompt;
+    res.json({ prompt: currentPrompt });
+  });
+
+  // MCQ Generation endpoint
+  app.post("/api/mcq/generate", async (req, res) => {
+    try {
+      const { topic, referenceText } = req.body;
+
+      if (!topic) {
+        return res.status(400).send("Topic is required");
+      }
+
+      // Replace the topic placeholder in the prompt
+      const prompt = currentPrompt
+        .replace(/\{topic\}/g, topic)
+        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
@@ -115,8 +136,6 @@ EXPLANATION:
             });
             break;
           case "CORRECT ANSWER":
-            // Extract just the letter, handling both formats:
-            // "CORRECT ANSWER: A" or just "A"
             const answerMatch = sectionContent.match(/[A-E]$/);
             parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
             console.log('Parsing correct answer:', { 

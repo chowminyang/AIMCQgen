@@ -11,7 +11,8 @@ import { SaveMCQDialog } from "@/components/save-mcq-dialog";
 import { PasswordOverlay } from "@/components/password-overlay";
 import { generateMCQ, getMCQHistory, saveMCQ, deleteMCQ } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { PromptEditor } from "@/components/prompt-editor";
 
 export default function Home() {
   const { toast } = useToast();
@@ -30,6 +31,43 @@ export default function Home() {
   const { data: mcqHistory = [] } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
     enabled: isAuthenticated,
+  });
+
+  const { data: promptData } = useQuery({
+    queryKey: ['/api/prompt'],
+    enabled: isAuthenticated,
+  });
+
+  const updatePromptMutation = useMutation({
+    mutationFn: async (newPrompt: string) => {
+      const response = await fetch('/api/prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: newPrompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/prompt'] });
+      toast({
+        title: "Success",
+        description: "System prompt has been updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update prompt",
+      });
+    },
   });
 
   const onGenerate = async (data: MCQFormData) => {
@@ -128,6 +166,14 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto py-8 px-4">
         <div className="space-y-8">
+          {/* Prompt Editor */}
+          <div className="w-full max-w-4xl mx-auto">
+            <PromptEditor
+              currentPrompt={promptData?.prompt || ''}
+              onSave={(newPrompt) => updatePromptMutation.mutate(newPrompt)}
+            />
+          </div>
+
           {/* Generation Form */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
