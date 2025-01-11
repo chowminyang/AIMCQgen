@@ -13,6 +13,7 @@ export const mcqs = pgTable("mcqs", {
   question: text("question").notNull(),
   options: text("options").notNull(), // Stored as JSON string
   correctAnswer: text("correct_answer").notNull(),
+  explanation: text("explanation").notNull(),
   topic: text("topic").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   isActive: boolean("is_active").default(true).notNull(),
