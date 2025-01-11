@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
 import type { ParsedMCQ } from "@/types";
 
@@ -25,7 +32,9 @@ const mcqFormSchema = z.object({
     D: z.string().min(1, "Option D is required"),
     E: z.string().min(1, "Option E is required"),
   }),
-  correctAnswer: z.string().min(1, "Correct answer is required"),
+  correctAnswer: z.string().refine(val => /^[A-E]$/.test(val), {
+    message: "Correct answer must be a single letter (A-E)",
+  }),
   explanation: z.string().min(1, "Explanation is required"),
 });
 
@@ -38,7 +47,15 @@ type Props = {
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
   const form = useForm<ParsedMCQ>({
     resolver: zodResolver(mcqFormSchema),
-    defaultValues: mcq,
+    defaultValues: {
+      ...mcq,
+      correctAnswer: mcq.correctAnswer.trim(),
+    },
+  });
+
+  console.log('MCQEditForm defaultValues:', {
+    ...mcq,
+    correctAnswer: mcq.correctAnswer.trim(),
   });
 
   return (
@@ -102,10 +119,25 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
           name="correctAnswer"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Correct Answer (A-E)</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter the correct answer letter..." {...field} />
-              </FormControl>
+              <FormLabel>Correct Answer</FormLabel>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select correct answer..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {['A', 'B', 'C', 'D', 'E'].map(letter => (
+                    <SelectItem key={letter} value={letter}>
+                      Option {letter}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

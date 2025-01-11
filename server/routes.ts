@@ -115,13 +115,26 @@ EXPLANATION:
             });
             break;
           case "CORRECT ANSWER":
-            // Extract just the letter from "CORRECT ANSWER: A" format
-            parsedContent.correctAnswer = sectionContent.trim().split(" ").pop() || "";
+            // Extract just the letter, handling both formats:
+            // "CORRECT ANSWER: A" or just "A"
+            const answerMatch = sectionContent.match(/[A-E]$/);
+            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+            console.log('Parsing correct answer:', { 
+              raw: sectionContent,
+              match: answerMatch,
+              extracted: parsedContent.correctAnswer 
+            });
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
             break;
         }
+      });
+
+      // Log the final parsed content for debugging
+      console.log('Final parsed MCQ:', {
+        ...parsedContent,
+        correctAnswer: parsedContent.correctAnswer
       });
 
       res.json({
