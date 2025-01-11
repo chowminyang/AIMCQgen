@@ -55,7 +55,7 @@ Guidelines for creation:
    - Provide option-specific explanations for why each option is correct or incorrect.`;
 
 export function registerRoutes(app: Express): Server {
-  // Setup authentication
+  // Setup authentication first - must be done before other routes
   setupAuth(app);
 
   // Generate MCQ endpoint
@@ -72,7 +72,7 @@ export function registerRoutes(app: Express): Server {
       }\n\nPlease generate an MCQ following the format exactly as shown above.`;
 
       const response = await openai.chat.completions.create({
-        model: "o1-mini",
+        model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: userPrompt }],
       });
 

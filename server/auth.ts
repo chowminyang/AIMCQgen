@@ -37,26 +37,24 @@ declare global {
 
 export async function createInitialUsers() {
   // Create master and test users if they don't exist
-  const users = [
+  const initialUsers = [
     { username: "master", password: "master123", isMaster: true },
     { username: "user1", password: "user1pass", isMaster: false },
     { username: "user2", password: "user2pass", isMaster: false },
     { username: "user3", password: "user3pass", isMaster: false },
   ];
 
-  for (const user of users) {
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, user.username))
-      .limit(1);
+  for (const userData of initialUsers) {
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.username, userData.username),
+    });
 
     if (!existingUser) {
-      const hashedPassword = await crypto.hash(user.password);
+      const hashedPassword = await crypto.hash(userData.password);
       await db.insert(users).values({
-        username: user.username,
+        username: userData.username,
         password: hashedPassword,
-        isMaster: user.isMaster,
+        isMaster: userData.isMaster,
       });
     }
   }
@@ -88,11 +86,9 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
+        const user = await db.query.users.findFirst({
+          where: eq(users.username, username),
+        });
 
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
@@ -114,12 +110,10 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      done(null, user);
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, id),
+      });
+      done(null, user || false);
     } catch (err) {
       done(err);
     }
@@ -133,7 +127,7 @@ export function setupAuth(app: Express) {
         .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
     }
 
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+    const cb = (err: any, user: Express.User | false, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
