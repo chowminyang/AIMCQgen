@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText } from "lucide-react";
+import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { MCQHistoryItem } from "@/types";
@@ -65,9 +65,12 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (type: 'full' | 'learner' = 'full') => {
     try {
-      const response = await fetch('/api/mcq/export/pdf', {
+      const endpoint = type === 'learner' ? '/api/mcq/export/pdf/learner' : '/api/mcq/export/pdf';
+      const filename = type === 'learner' ? 'mcq-practice' : 'mcq-library';
+
+      const response = await fetch(endpoint, {
         method: 'GET',
       });
 
@@ -77,7 +80,7 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mcq-library-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      a.download = `${filename}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -85,7 +88,7 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
 
       toast({
         title: "Success",
-        description: "MCQs exported to PDF successfully",
+        description: `MCQs exported to PDF successfully${type === 'learner' ? ' (Practice Version)' : ''}`,
       });
     } catch (error) {
       toast({
@@ -117,11 +120,19 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
         </Button>
         <Button 
           variant="outline" 
-          onClick={handleExportPDF}
+          onClick={() => handleExportPDF('full')}
           className="flex items-center gap-2"
         >
           <FileText className="h-4 w-4" />
           Export to PDF
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => handleExportPDF('learner')}
+          className="flex items-center gap-2"
+        >
+          <GraduationCap className="h-4 w-4" />
+          Export Practice PDF
         </Button>
       </div>
 
