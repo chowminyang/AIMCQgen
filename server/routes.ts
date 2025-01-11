@@ -4,18 +4,14 @@ import { db } from "@db";
 import { mcqs, mcqSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import { setupAuth, requireAuth } from "./auth";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export function registerRoutes(app: Express): Server {
-  // Setup authentication routes first
-  setupAuth(app);
-
-  // MCQ Generation endpoint - protected
-  app.post("/api/mcq/generate", requireAuth, async (req, res) => {
+  // MCQ Generation endpoint
+  app.post("/api/mcq/generate", async (req, res) => {
     try {
       const { topic, referenceText } = req.body;
 
@@ -140,8 +136,8 @@ ${generatedContent}`;
     }
   });
 
-  // Save MCQ endpoint - protected
-  app.post("/api/mcq/save", requireAuth, async (req, res) => {
+  // Save MCQ endpoint
+  app.post("/api/mcq/save", async (req, res) => {
     try {
       const { topic, referenceText, generatedText } = req.body;
 
@@ -157,8 +153,8 @@ ${generatedContent}`;
     }
   });
 
-  // Get MCQ history endpoint - protected
-  app.get("/api/mcq/history", requireAuth, async (req, res) => {
+  // Get MCQ history endpoint
+  app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
       res.json(mcqHistory);
@@ -168,8 +164,7 @@ ${generatedContent}`;
     }
   });
 
-  // Get single MCQ endpoint - protected
-  app.get("/api/mcq/:id", requireAuth, async (req, res) => {
+  app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
       if (isNaN(mcqId)) {
