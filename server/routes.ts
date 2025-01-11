@@ -68,8 +68,7 @@ EXPLANATION:
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
+        messages: [{ role: "user", content: prompt }]
       });
 
       const generatedContent = completion.choices[0].message.content;
