@@ -14,9 +14,7 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
-    const content = `Clinical Scenario:\n${mcq.clinicalScenario}\n\nQuestion:\n${mcq.question}\n\nOptions:\nA. ${mcq.options.A}\nB. ${mcq.options.B}\nC. ${mcq.options.C}\nD. ${mcq.options.D}\nE. ${mcq.options.E}\n\nCorrect Answer: ${mcq.correctAnswer}\n\nFeedback:\n${mcq.feedback}`;
-
-    navigator.clipboard.writeText(content).then(() => {
+    navigator.clipboard.writeText(mcq.text).then(() => {
       setCopied(true);
       toast({
         title: "Copied to clipboard",
@@ -39,38 +37,8 @@ export function MCQDisplay({ mcq }: MCQDisplayProps) {
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <h3 className="font-semibold mb-2">Clinical Scenario</h3>
-          <p className="text-sm whitespace-pre-wrap">{mcq.clinicalScenario}</p>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2">Question</h3>
-          <p className="text-sm">{mcq.question}</p>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2">Options</h3>
-          <div className="space-y-2 text-sm">
-            {Object.entries(mcq.options).map(([key, value]) => (
-              <div key={key} className="flex gap-2">
-                <span className="font-medium">{key}.</span>
-                <span>{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2">Correct Answer</h3>
-          <p className="text-sm">{mcq.correctAnswer}</p>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2">Feedback</h3>
-          <p className="text-sm whitespace-pre-wrap">{mcq.feedback}</p>
-        </div>
+      <CardContent>
+        <pre className="whitespace-pre-wrap text-sm">{mcq.text}</pre>
       </CardContent>
     </Card>
   );

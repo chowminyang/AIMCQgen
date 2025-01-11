@@ -50,45 +50,6 @@ Guidelines for creation:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.`;
 
-function parseResponse(text: string): {
-  clinicalScenario: string;
-  question: string;
-  options: { A: string; B: string; C: string; D: string; E: string };
-  correctAnswer: string;
-  feedback: string;
-} {
-  // Extract sections using regex
-  const clinicalScenarioMatch = text.match(/Clinical Scenario:\s*([\s\S]*?)(?=\n\s*Question:)/);
-  const questionMatch = text.match(/Question:\s*([\s\S]*?)(?=\n\s*Options:)/);
-  const optionsMatch = text.match(/Options:\s*([\s\S]*?)(?=\n\s*Correct Answer:)/);
-  const correctAnswerMatch = text.match(/Correct Answer:\s*([A-E])/);
-  const feedbackMatch = text.match(/Feedback:\s*([\s\S]*?)$/);
-
-  if (!clinicalScenarioMatch || !questionMatch || !optionsMatch || !correctAnswerMatch || !feedbackMatch) {
-    throw new Error("Failed to parse response format");
-  }
-
-  // Parse options
-  const optionsText = optionsMatch[1];
-  const optionEntries = optionsText.match(/[A-E]\.\s*([\s\S]*?)(?=\s*[A-E]\.|$)/g) || [];
-  const options: { [key: string]: string } = {
-    A: "", B: "", C: "", D: "", E: ""
-  };
-
-  optionEntries.forEach(option => {
-    const [letter, ...content] = option.split('.');
-    options[letter.trim()] = content.join('.').trim();
-  });
-
-  return {
-    clinicalScenario: clinicalScenarioMatch[1].trim(),
-    question: questionMatch[1].trim(),
-    options: options as { A: string; B: string; C: string; D: string; E: string },
-    correctAnswer: correctAnswerMatch[1].trim(),
-    feedback: feedbackMatch[1].trim()
-  };
-}
-
 export function registerRoutes(app: Express): Server {
   app.post("/api/mcq/generate", async (req, res) => {
     try {
@@ -110,8 +71,7 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content received from OpenAI");
       }
 
-      const mcq = parseResponse(content);
-      res.json(mcq);
+      res.json({ text: content });
     } catch (error: any) {
       res.status(500).send(error.message);
     }

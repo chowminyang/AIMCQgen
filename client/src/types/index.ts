@@ -5,15 +5,5 @@ export interface MCQFormData {
 }
 
 export interface MCQResponse {
-  clinicalScenario: string;
-  question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  };
-  correctAnswer: string;
-  feedback: string;
+  text: string;
 }
