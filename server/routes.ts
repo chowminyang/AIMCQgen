@@ -39,36 +39,6 @@ Format each MCQ as a JSON object with the following structure:
 }`;
 
 export function registerRoutes(app: Express): Server {
-  // Create MCQ
-  app.post("/api/mcqs", async (req, res) => {
-    try {
-      const { question, options, correctAnswer, topic, explanation } = req.body;
-      const newMcq = await db.insert(mcqs).values({
-        question,
-        options: JSON.stringify(options),
-        correctAnswer,
-        explanation,
-        topic
-      }).returning();
-      res.json(newMcq[0]);
-    } catch (error: any) {
-      console.error('Create MCQ error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get all MCQs
-  app.get("/api/mcqs", async (req, res) => {
-    try {
-      const allMcqs = await db.select().from(mcqs)
-        .orderBy(desc(mcqs.createdAt));
-      res.json(allMcqs);
-    } catch (error: any) {
-      console.error('Fetch MCQs error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
@@ -91,13 +61,16 @@ export function registerRoutes(app: Express): Server {
         response_format: { type: "json_object" }
       });
 
-      // Parse the generated MCQs
-      const generatedContent = JSON.parse(completion.choices[0].message.content);
-      res.json(generatedContent);
+      const generatedContent = completion.choices[0].message.content;
+      if (!generatedContent) {
+        throw new Error("No content generated");
+      }
 
+      const result = JSON.parse(generatedContent);
+      res.json(result);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ message: error.message || "Failed to generate MCQs" });
     }
   });
 
