@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { db } from "@db";
 import { setupAuth } from "./auth";
 
 const app = express();
@@ -41,15 +40,13 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Test database connection
-    await db.query.users.findMany();
-    log("Database connection successful");
-
-    // Setup authentication after database is confirmed working
+    // Setup authentication before any route handling
     setupAuth(app);
     log("Authentication setup complete");
 
+    // Register routes after auth is setup
     const server = registerRoutes(app);
+    log("Routes registered");
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

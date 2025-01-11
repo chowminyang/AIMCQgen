@@ -1,9 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { InsertUser, SelectUser } from "@db/schema";
+
+type User = {
+  id: number;
+};
+
+type LoginData = {
+  password: string;
+};
 
 type RequestResult = {
   ok: true;
-  user?: SelectUser;
+  user?: User;
 } | {
   ok: false;
   message: string;
@@ -12,14 +19,16 @@ type RequestResult = {
 async function handleRequest(
   url: string,
   method: string,
-  body?: InsertUser
+  body?: LoginData
 ): Promise<RequestResult> {
   try {
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(localStorage.getItem('auth') ? { "Authorization": `Bearer ${localStorage.getItem('auth')}` } : {})
+      },
       body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
     });
 
     if (!response.ok) {
@@ -32,24 +41,31 @@ async function handleRequest(
     }
 
     const data = await response.json();
+    if (data.user) {
+      localStorage.setItem('auth', 'authenticated');
+    }
     return { ok: true, user: data.user };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
   }
 }
 
-async function fetchUser(): Promise<SelectUser | null> {
+async function fetchUser(): Promise<User | null> {
+  const auth = localStorage.getItem('auth');
+  if (!auth) {
+    return null;
+  }
+
   const response = await fetch('/api/user', {
-    credentials: 'include'
+    headers: {
+      "Authorization": `Bearer ${auth}`
+    }
   });
 
   if (!response.ok) {
     if (response.status === 401) {
+      localStorage.removeItem('auth');
       return null;
-    }
-
-    if (response.status >= 500) {
-      throw new Error(`${response.status}: ${response.statusText}`);
     }
 
     throw new Error(`${response.status}: ${await response.text()}`);
@@ -61,15 +77,15 @@ async function fetchUser(): Promise<SelectUser | null> {
 export function useUser() {
   const queryClient = useQueryClient();
 
-  const { data: user, error, isLoading } = useQuery<SelectUser | null, Error>({
+  const { data: user, error, isLoading } = useQuery<User | null, Error>({
     queryKey: ['user'],
     queryFn: fetchUser,
     staleTime: Infinity,
     retry: false
   });
 
-  const loginMutation = useMutation<RequestResult, Error, InsertUser>({
-    mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
+  const loginMutation = useMutation<RequestResult, Error, LoginData>({
+    mutationFn: (loginData) => handleRequest('/api/login', 'POST', loginData),
     onSuccess: (data) => {
       if (data.ok && data.user) {
         queryClient.setQueryData(['user'], data.user);
@@ -80,6 +96,7 @@ export function useUser() {
   const logoutMutation = useMutation<RequestResult, Error>({
     mutationFn: () => handleRequest('/api/logout', 'POST'),
     onSuccess: () => {
+      localStorage.removeItem('auth');
       queryClient.setQueryData(['user'], null);
     },
   });

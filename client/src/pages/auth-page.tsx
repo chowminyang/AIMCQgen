@@ -23,7 +23,6 @@ import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -37,7 +36,6 @@ export default function AuthPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
       password: "",
     },
   });
@@ -68,27 +66,14 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
+          <CardTitle>MCQ Generator Login</CardTitle>
           <CardDescription>
-            Enter your credentials to access the MCQ Generator
+            Enter the password to access the MCQ Generator
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="password"
