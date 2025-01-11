@@ -135,7 +135,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
           disabled={isLoading || tokenCount > MAX_TOKENS}
           className="w-full"
         >
-          {isLoading ? "Generating..." : "Generate MCQ"}
+          {isLoading ? "Generating..." : "Generate a high quality MCQ"}
         </Button>
       </form>
     </Form>
