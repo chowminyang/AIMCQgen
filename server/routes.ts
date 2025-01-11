@@ -2,40 +2,31 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are an expert educational content creator specializing in creating multiple-choice questions (MCQs). Your task is to generate high-quality MCQs based on the given topic and reference text.
+// Medical MCQ system prompt from the template
+const SYSTEM_PROMPT = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
-Follow these guidelines:
-1. Each MCQ should have:
-   - A clear, concise question
-   - 4 options (A, B, C, D)
-   - One correct answer
-   - A brief explanation why the answer is correct
-2. Questions should test understanding, not just memorization
-3. Options should be plausible but clearly distinguishable
-4. Use simple, clear language
-
-Format each MCQ as a JSON object with the following structure:
+Please create a single high-quality MCQ following this format:
 {
-  "questions": [
-    {
-      "question": "The question text",
-      "options": {
-        "A": "First option",
-        "B": "Second option",
-        "C": "Third option",
-        "D": "Fourth option"
-      },
-      "correctAnswer": "A",
-      "explanation": "Why this is the correct answer"
-    }
-  ]
+  "mcq": {
+    "clinicalScenario": "A detailed 200-word clinical scenario",
+    "question": "The second-order thinking question",
+    "options": {
+      "A": "First option",
+      "B": "Second option",
+      "C": "Third option",
+      "D": "Fourth option",
+      "E": "Fifth option"
+    },
+    "correctAnswer": "The letter of correct option (A-E)",
+    "explanation": "Detailed explanation of why the correct answer is best, and explanations for all options"
+  }
 }`;
 
 export function registerRoutes(app: Express): Server {
@@ -54,7 +45,7 @@ export function registerRoutes(app: Express): Server {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Generate 3 multiple choice questions for the following topic: ${topic}\n\nReference text: ${referenceText}`
+            content: `Generate one challenging medical MCQ for the following topic: ${topic}\n\nReference text: ${referenceText}`
           }
         ],
         temperature: 0.7,
@@ -77,9 +68,10 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, question, options, correctAnswer, explanation } = req.body;
+      const { clinicalScenario, question, options, correctAnswer, explanation, topic } = req.body;
       const newMcq = await db.insert(mcqs).values({
         topic,
+        clinicalScenario,
         question,
         options: JSON.stringify(options),
         correctAnswer,
@@ -101,6 +93,23 @@ export function registerRoutes(app: Express): Server {
       res.json(mcqHistory);
     } catch (error: any) {
       console.error('MCQ history error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single MCQ endpoint
+  app.get("/api/mcq/:id", async (req, res) => {
+    try {
+      const mcqId = parseInt(req.params.id);
+      const [mcq] = await db.select().from(mcqs).where(eq(mcqs.id, mcqId));
+
+      if (!mcq) {
+        return res.status(404).json({ message: "MCQ not found" });
+      }
+
+      res.json(mcq);
+    } catch (error: any) {
+      console.error('Get MCQ error:', error);
       res.status(500).json({ message: error.message });
     }
   });

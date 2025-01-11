@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 // Users table for simplified authentication
@@ -7,16 +7,16 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
 });
 
-// MCQs table for storing questions
+// MCQs table for storing medical questions
 export const mcqs = pgTable("mcqs", {
   id: serial("id").primaryKey(),
+  topic: text("topic").notNull(),
+  clinicalScenario: text("clinical_scenario").notNull(),
   question: text("question").notNull(),
   options: text("options").notNull(), // Stored as JSON string
   correctAnswer: text("correct_answer").notNull(),
   explanation: text("explanation").notNull(),
-  topic: text("topic").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
 });
 
 // Schema validations
