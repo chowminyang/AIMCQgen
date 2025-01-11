@@ -19,26 +19,8 @@ export function MCQHistory({ items }: MCQHistoryProps) {
   const { toast } = useToast();
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  const copyToClipboard = (mcq: MCQHistoryItem, id: number) => {
-    const formattedMCQ = `CLINICAL SCENARIO:
-${mcq.clinical_scenario}
-
-QUESTION:
-${mcq.question}
-
-OPTIONS:
-A) ${mcq.options.A}
-B) ${mcq.options.B}
-C) ${mcq.options.C}
-D) ${mcq.options.D}
-E) ${mcq.options.E}
-
-CORRECT ANSWER: ${mcq.correct_answer}
-
-EXPLANATION:
-${mcq.explanation}`;
-
-    navigator.clipboard.writeText(formattedMCQ).then(() => {
+  const copyToClipboard = (text: string, id: number) => {
+    navigator.clipboard.writeText(text).then(() => {
       setCopiedId(id);
       toast({
         title: "Copied to clipboard",
@@ -51,7 +33,7 @@ ${mcq.explanation}`;
   if (items.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
-        No MCQs saved yet. Create and save one to your library!
+        No MCQs generated yet. Try creating one!
       </div>
     );
   }
@@ -73,7 +55,7 @@ ${mcq.explanation}`;
               className="h-8 w-8"
               onClick={(e) => {
                 e.stopPropagation();
-                copyToClipboard(item, item.id);
+                copyToClipboard(item.generated_text, item.id);
               }}
             >
               {copiedId === item.id ? (
@@ -84,41 +66,17 @@ ${mcq.explanation}`;
             </Button>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {item.reference_text && (
                 <div>
-                  <div className="font-medium mb-1">Reference Material:</div>
-                  <pre className="text-sm whitespace-pre-wrap bg-muted p-2 rounded">
+                  <span className="font-medium">Reference:</span>
+                  <pre className="mt-1 text-sm whitespace-pre-wrap">
                     {item.reference_text}
                   </pre>
                 </div>
               )}
-              <div>
-                <div className="font-medium mb-1">Clinical Scenario:</div>
-                <div className="text-sm">{item.clinical_scenario}</div>
-              </div>
-              <div>
-                <div className="font-medium mb-1">Question:</div>
-                <div className="text-sm">{item.question}</div>
-              </div>
-              <div>
-                <div className="font-medium mb-1">Options:</div>
-                <div className="text-sm space-y-1">
-                  {Object.entries(item.options).map(([letter, text]) => (
-                    <div key={letter}>
-                      <span className="font-medium">{letter}) </span>
-                      {text}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="font-medium mb-1">Correct Answer:</div>
-                <div className="text-sm">{item.correct_answer}</div>
-              </div>
-              <div>
-                <div className="font-medium mb-1">Explanation:</div>
-                <div className="text-sm">{item.explanation}</div>
+              <div className="mt-4">
+                <pre className="whitespace-pre-wrap text-sm">{item.generated_text}</pre>
               </div>
             </div>
           </AccordionContent>

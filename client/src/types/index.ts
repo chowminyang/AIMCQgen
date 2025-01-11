@@ -25,17 +25,6 @@ export interface ParsedMCQ {
 export interface MCQHistoryItem {
   id: number;
   topic: string;
-  clinical_scenario: string;
-  question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  };
-  correct_answer: string;
-  explanation: string;
-  reference_text?: string;
+  generated_text: string;
   created_at: string;
 }
