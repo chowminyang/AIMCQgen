@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -13,34 +13,14 @@ export const users = pgTable("users", {
 export const mcqs = pgTable("mcqs", {
   id: serial("id").primaryKey(),
   topic: text("topic").notNull(),
-  clinical_scenario: text("clinical_scenario").notNull(),
-  question: text("question").notNull(),
-  options: json("options").$type<{
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  }>().notNull(),
-  correct_answer: text("correct_answer").notNull(),
-  explanation: text("explanation").notNull(),
+  generated_text: text("generated_text").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Schema validations using zod
 export const mcqSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
-  clinical_scenario: z.string().min(1, "Clinical scenario is required"),
-  question: z.string().min(1, "Question is required"),
-  options: z.object({
-    A: z.string().min(1, "Option A is required"),
-    B: z.string().min(1, "Option B is required"),
-    C: z.string().min(1, "Option C is required"),
-    D: z.string().min(1, "Option D is required"),
-    E: z.string().min(1, "Option E is required"),
-  }),
-  correct_answer: z.string().min(1, "Correct answer is required"),
-  explanation: z.string().min(1, "Explanation is required"),
+  generated_text: z.string().min(1, "Generated text is required"),
 });
 
 export const insertUserSchema = createInsertSchema(users);

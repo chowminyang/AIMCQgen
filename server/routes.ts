@@ -4,6 +4,7 @@ import { db } from "@db";
 import { mcqs, mcqSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
+import PDFDocument from "pdfkit";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -90,8 +91,10 @@ EXPLANATION:
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      console.log('Save MCQ request body:', req.body);
-      const validationResult = mcqSchema.safeParse(req.body);
+      const validationResult = mcqSchema.safeParse({
+        topic: req.body.topic,
+        generated_text: req.body.generatedText
+      });
 
       if (!validationResult.success) {
         console.error('Validation errors:', validationResult.error.errors);
@@ -105,7 +108,7 @@ EXPLANATION:
 
       const [newMcq] = await db.insert(mcqs).values({
         topic: mcqData.topic,
-        generatedText: mcqData.generatedText, // Assuming generatedText field exists in schema
+        generated_text: mcqData.generated_text
       }).returning();
 
       res.json(newMcq);
@@ -147,7 +150,7 @@ EXPLANATION:
 
         doc.fontSize(16).text(`Topic: ${mcq.topic}`, { underline: true });
         doc.moveDown();
-        doc.fontSize(12).text(mcq.generatedText);
+        doc.fontSize(12).text(mcq.generated_text);
         doc.moveDown();
       });
 
