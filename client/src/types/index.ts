@@ -24,18 +24,7 @@ export interface ParsedMCQ {
 
 export interface MCQHistoryItem {
   id: number;
-  name: string;
-  topic?: string;
-  reference_text?: string;
+  topic: string;
   generated_text: string;
-  parsed_data?: ParsedMCQ;
   created_at: string;
-}
-
-export interface SaveMCQFormData {
-  name: string;
-  topic?: string;
-  referenceText?: string;
-  generatedText: string;
-  parsedData: ParsedMCQ;
 }
