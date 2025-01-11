@@ -23,7 +23,7 @@ export function parseMCQText(text: string): ParsedMCQ | null {
       explanation: "",
     };
 
-    // Split the text into sections based on headers
+    // Split the text into sections
     const sections = text.split('\n\n').reduce((acc: Record<string, string>, section) => {
       const headerMatch = section.match(/^(CLINICAL SCENARIO|QUESTION|OPTIONS|CORRECT ANSWER|EXPLANATION):/i);
       if (headerMatch) {
@@ -37,7 +37,7 @@ export function parseMCQText(text: string): ParsedMCQ | null {
     // Map sections to MCQ structure
     mcq.clinicalScenario = sections['CLINICAL SCENARIO'] || '';
     mcq.question = sections['QUESTION'] || '';
-    mcq.correctAnswer = sections['CORRECT ANSWER']?.trim() || '';
+    mcq.correctAnswer = sections['CORRECT ANSWER']?.replace(/^[^A-E]*([A-E]).*$/i, '$1').trim() || '';
     mcq.explanation = sections['EXPLANATION'] || '';
 
     // Parse options
@@ -52,6 +52,13 @@ export function parseMCQText(text: string): ParsedMCQ | null {
           mcq.options[letter as keyof typeof mcq.options] = content.trim();
         }
       });
+    }
+
+    // Validate that we have all required fields
+    if (!mcq.clinicalScenario || !mcq.question || !mcq.correctAnswer || 
+        !mcq.options.A || !mcq.options.B || !mcq.options.C || !mcq.options.D || !mcq.options.E) {
+      console.error('Missing required MCQ fields:', mcq);
+      return null;
     }
 
     return mcq;
