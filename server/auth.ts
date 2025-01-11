@@ -19,7 +19,6 @@ declare module 'express-session' {
 
 // Authentication middleware
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  console.log('Session state:', req.session); // Debug log
   if (!req.session.authenticated) {
     return res.status(401).json({ message: "Please login first" });
   }
@@ -39,25 +38,29 @@ export function setupAuth(app: Express) {
       }
 
       const { password } = result.data;
-      // Case-insensitive password comparison
       if (password.toLowerCase() !== APP_PASSWORD.toLowerCase()) {
         return res.status(401).json({ message: "Invalid password" });
       }
 
+      // Set session data
       req.session.authenticated = true;
       req.session.userId = 1;
 
-      // Force session save
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ message: "Login failed" });
-        }
-        console.log('Session after login:', req.session); // Debug log
-        res.json({
-          message: "Login successful",
-          user: { id: 1 }
+      // Force session save and wait for it
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+            reject(err);
+          }
+          resolve();
         });
+      });
+
+      console.log('Session after login:', req.session); // Debug log
+      res.json({
+        message: "Login successful",
+        user: { id: 1 }
       });
     } catch (error: any) {
       console.error('Login error:', error);
@@ -66,8 +69,12 @@ export function setupAuth(app: Express) {
   });
 
   // User info endpoint
-  app.get("/api/user", requireAuth, (req, res) => {
-    res.json({ id: req.session.userId });
+  app.get("/api/user", (req, res) => {
+    console.log('Session state:', req.session); // Debug log
+    if (req.session.authenticated) {
+      return res.json({ id: req.session.userId });
+    }
+    res.status(401).json({ message: "Please login first" });
   });
 
   // Logout endpoint
