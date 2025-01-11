@@ -6,8 +6,6 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
 // Setup session middleware before any routes
 const MemoryStore = createMemoryStore(session);
@@ -19,18 +17,39 @@ app.use(session({
     checkPeriod: 86400000 // prune expired entries every 24h
   }),
   cookie: {
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: false, // Set to true only in production with HTTPS
+    sameSite: 'lax',
     httpOnly: true,
-    sameSite: 'lax'
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
+
+// Basic middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// CORS for development
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  console.log(`[${new Date().toISOString()}] ${req.method} ${path} - Session:`, req.session);
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {

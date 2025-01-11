@@ -19,6 +19,13 @@ declare module 'express-session' {
 
 // Authentication middleware
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  // Debug log the session state
+  console.log('Auth check - Session state:', {
+    id: req.sessionID,
+    authenticated: req.session.authenticated,
+    userId: req.session.userId
+  });
+
   if (!req.session.authenticated) {
     return res.status(401).json({ message: "Please login first" });
   }
@@ -30,6 +37,8 @@ export function setupAuth(app: Express) {
   // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
+      console.log('Login attempt - Request body:', req.body);
+
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ 
@@ -57,7 +66,12 @@ export function setupAuth(app: Express) {
         });
       });
 
-      console.log('Session after login:', req.session); // Debug log
+      console.log('Login successful - Session after login:', {
+        id: req.sessionID,
+        authenticated: req.session.authenticated,
+        userId: req.session.userId
+      });
+
       res.json({
         message: "Login successful",
         user: { id: 1 }
@@ -70,7 +84,12 @@ export function setupAuth(app: Express) {
 
   // User info endpoint
   app.get("/api/user", (req, res) => {
-    console.log('Session state:', req.session); // Debug log
+    console.log('User info check - Session state:', {
+      id: req.sessionID,
+      authenticated: req.session.authenticated,
+      userId: req.session.userId
+    });
+
     if (req.session.authenticated) {
       return res.json({ id: req.session.userId });
     }
