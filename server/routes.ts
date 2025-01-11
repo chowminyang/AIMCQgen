@@ -76,7 +76,54 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      res.send(generatedContent);
+      // Parse the generated content using GPT-4o
+      const parsePrompt = `Given this MCQ text, extract and format the content into the following sections. Return ONLY a JSON object matching this structure exactly.
+
+{
+  "clinicalScenario": "The clinical scenario text here",
+  "question": "The question text here",
+  "options": {
+    "A": "Option A text",
+    "B": "Option B text",
+    "C": "Option C text",
+    "D": "Option D text",
+    "E": "Option E text"
+  },
+  "correctAnswer": "A single letter (A-E)",
+  "explanation": "The explanation text here"
+}
+
+Here's the MCQ to parse:
+
+${generatedContent}`;
+
+      const parsedCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Only output valid JSON." 
+          },
+          { role: "user", content: parsePrompt }
+        ]
+      });
+
+      const parsedContent = parsedCompletion.choices[0].message.content;
+      if (!parsedContent) {
+        throw new Error("Failed to parse MCQ content");
+      }
+
+      try {
+        const parsedJson = JSON.parse(parsedContent);
+        res.json({
+          raw: generatedContent,
+          parsed: parsedJson
+        });
+      } catch (parseError) {
+        console.error('JSON parsing error:', parseError);
+        console.error('Raw parsed content:', parsedContent);
+        throw new Error("Invalid JSON format received from parsing");
+      }
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       if (error.response?.status === 400) {
@@ -113,7 +160,7 @@ EXPLANATION:
       res.json(newMcq);
     } catch (error: any) {
       console.error('Save MCQ error:', error);
-      res.status(500).json({ message: error.message || "Failed to save MCQ" });
+      res.status(500).send(error.message || "Failed to save MCQ");
     }
   });
 

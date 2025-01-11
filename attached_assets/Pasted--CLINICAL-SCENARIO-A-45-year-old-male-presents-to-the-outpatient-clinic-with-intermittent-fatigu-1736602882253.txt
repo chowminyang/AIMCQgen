@@ -1,0 +1,31 @@
+**CLINICAL SCENARIO:**
+A 45-year-old male presents to the outpatient clinic with intermittent fatigue and mild muscle weakness over the past six months. He reports no history of kidney stones, bone pain, or gastrointestinal disturbances. His medical history is unremarkable, and he takes no regular medications. He denies excessive sun exposure, alcohol use, and illicit drug use. He is married with two children and has no significant family medical history. On examination, his blood pressure is 130/80 mmHg, heart rate is 72 bpm, and respiratory rate is 16 breaths per minute. He appears well-nourished with no notable abnormalities. Neurological examination reveals mild proximal muscle weakness but no sensory deficits. Laboratory investigations show:
+- Serum calcium: 3.2 mmol/L (normal range: 2.2-2.6 mmol/L)
+- Serum phosphate: 0.8 mmol/L (normal range: 0.8-1.5 mmol/L)
+- Serum parathyroid hormone (PTH): 8 pmol/L (normal range: 1.6-6.9 pmol/L)
+- Serum creatinine: 90 μmol/L (normal range: 60-110 μmol/L)
+- 25-hydroxyvitamin D: 50 nmol/L (normal range: 50-125 nmol/L)
+- Urinary calcium excretion: 1.0 mmol/24 hours (normal range: 2.5-7.5 mmol/24 hours)
+
+**QUESTION:**
+Given the clinical presentation and laboratory findings, which of the following is the most appropriate next step to differentiate familial hypocalciuric hypercalcemia (FHH) from primary hyperparathyroidism?
+
+**OPTIONS:**
+A) Perform a sestamibi scan to locate parathyroid adenoma
+B) Measure the calcium/creatinine clearance ratio
+C) Initiate bisphosphonate therapy
+D) Schedule genetic testing for calcium-sensing receptor mutations
+E) Begin observation with repeat calcium levels in six months
+
+**CORRECT ANSWER:** B
+
+**EXPLANATION:**
+**Option B: Measure the calcium/creatinine clearance ratio** is the best next step. In FHH, the calcium/creatinine clearance ratio is typically low (<0.01), distinguishing it from primary hyperparathyroidism, where the ratio is higher (>0.02). This test is non-invasive and helps confirm the suspicion of FHH based on hypercalcemia with low urinary calcium excretion.
+
+**Option A: Perform a sestamibi scan to locate parathyroid adenoma** is less appropriate at this stage. Imaging is typically reserved for cases where primary hyperparathyroidism is strongly suspected, especially after biochemical confirmation.
+
+**Option C: Initiate bisphosphonate therapy** is not indicated without a clear diagnosis of a condition like osteoporosis or malignancy-related hypercalcemia.
+
+**Option D: Schedule genetic testing for calcium-sensing receptor mutations** might be considered if FHH is strongly suspected, but it is more invasive and costly compared to measuring the calcium/creatinine clearance ratio, which is a more immediate and practical initial test.
+
+**Option E: Begin observation with repeat calcium levels in six months** is inappropriate given the persistent hypercalcemia; further investigation is warranted to determine the underlying cause.

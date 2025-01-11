@@ -20,7 +20,6 @@ import { MCQDisplay } from "@/components/mcq-display";
 import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { MCQEditForm } from "@/components/mcq-edit-form";
 import { generateMCQ } from "@/lib/api";
-import { parseMCQText } from "@/lib/utils";
 import type { ParsedMCQ } from "@/types";
 
 const formSchema = z.object({
@@ -49,20 +48,9 @@ export default function Home() {
     setIsGenerating(true);
     try {
       const result = await generateMCQ(data);
-      setGeneratedMCQ(result);
-
-      // Parse the MCQ text into sections
-      const parsed = parseMCQText(result);
-      if (parsed) {
-        setParsedMCQ(parsed);
-        setShowEditor(true);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Parsing Error",
-          description: "Failed to parse the generated MCQ into sections. Please try again.",
-        });
-      }
+      setGeneratedMCQ(result.raw);
+      setParsedMCQ(result.parsed);
+      setShowEditor(true);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
       toast({
@@ -79,7 +67,6 @@ export default function Home() {
 
   const handleSaveEdits = (editedMCQ: ParsedMCQ) => {
     setParsedMCQ(editedMCQ);
-    // Here you can add logic to save to database if needed
     toast({
       title: "Success",
       description: "MCQ has been updated successfully",
