@@ -78,7 +78,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
     const baseTokens = encode(promptWithTopic).length;
 
     // Calculate tokens for reference text with its prefix
-    const referenceTextTokens = watchReferenceText ? 
+    const referenceTextTokens = watchReferenceText ?
       encode(REFERENCE_TEXT_PREFIX + watchReferenceText).length : 0;
 
     // Set the total token count
@@ -117,7 +117,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
                   />
                 </FormControl>
                 <div className={`text-sm ${tokenCount > MAX_TOKENS ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {tokenCount} / {MAX_TOKENS} tokens used
+                  {MAX_TOKENS - tokenCount} tokens remaining
                   {tokenCount > MAX_TOKENS && (
                     <span className="block text-destructive">
                       Text exceeds maximum token limit
@@ -130,9 +130,9 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
           )}
         />
 
-        <Button 
-          type="submit" 
-          disabled={isLoading || tokenCount > MAX_TOKENS} 
+        <Button
+          type="submit"
+          disabled={isLoading || tokenCount > MAX_TOKENS}
           className="w-full"
         >
           {isLoading ? "Generating..." : "Generate MCQ"}
