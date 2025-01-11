@@ -5,13 +5,15 @@ export function registerRoutes(app: Express): Server {
   // Simple authentication middleware
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
+
+    // Check if auth header matches the token from successful login
     if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'authenticated') {
       return res.status(401).json({ message: "Not authorized" });
     }
     next();
   };
 
-  // Generate MCQ endpoint
+  // Generate MCQ endpoint with auth
   app.post("/api/mcq/generate", requireAuth, async (req, res) => {
     try {
       const { topic, purpose, referenceText } = req.body;
@@ -23,7 +25,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Save MCQ endpoint
+  // Save MCQ endpoint with auth
   app.post("/api/mcq/save", requireAuth, async (req, res) => {
     try {
       const { topic, purpose, referenceText, generatedText, editedText } = req.body;
@@ -35,7 +37,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get MCQ history endpoint
+  // Get MCQ history endpoint with auth
   app.get("/api/mcq/history", requireAuth, async (req, res) => {
     try {
       // TODO: Implement MCQ history
