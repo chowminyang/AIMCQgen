@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { mcqs } from "@db/schema";
+import { mcqs, mcqSchema, type InsertMcq } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
+import PDFDocument from "pdfkit";
+import { Readable } from "stream";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -89,34 +91,27 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, clinicalScenario, question, options, correctAnswer, explanation } = req.body;
+      const validationResult = mcqSchema.safeParse(req.body);
 
-      if (!topic || !clinicalScenario || !question || !options || !correctAnswer || !explanation) {
-        return res.status(400).json({ message: "All MCQ fields are required" });
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.errors 
+        });
       }
 
-      const mcqData = {
-        clinicalScenario,
-        question,
-        options,
-        correctAnswer,
-        explanation
-      };
+      const mcqData = validationResult.data;
 
       const [newMcq] = await db.insert(mcqs).values({
-        topic,
-        generated_text: JSON.stringify(mcqData),
-        saved: true,
+        topic: mcqData.topic,
+        clinical_scenario: mcqData.clinical_scenario,
+        question: mcqData.question,
+        options: mcqData.options,
+        correct_answer: mcqData.correct_answer,
+        explanation: mcqData.explanation,
       }).returning();
 
-      const savedMcqData = {
-        id: newMcq.id,
-        topic: newMcq.topic,
-        ...mcqData,
-        createdAt: newMcq.created_at
-      };
-
-      res.json(savedMcqData);
+      res.json(newMcq);
     } catch (error: any) {
       console.error('Save MCQ error:', error);
       res.status(500).json({ message: error.message || "Failed to save MCQ" });
@@ -127,21 +122,71 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
-
-      const formattedHistory = mcqHistory.map(mcq => {
-        const mcqData = JSON.parse(mcq.generated_text);
-        return {
-          id: mcq.id,
-          topic: mcq.topic,
-          ...mcqData,
-          createdAt: mcq.created_at
-        };
-      });
-
-      res.json(formattedHistory);
+      res.json(mcqHistory);
     } catch (error: any) {
       console.error('MCQ history error:', error);
       res.status(500).json({ message: error.message || "Failed to fetch MCQ history" });
+    }
+  });
+
+  // Export MCQs to PDF endpoint
+  app.get("/api/mcq/export-pdf", async (req, res) => {
+    try {
+      const allMcqs = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+
+      // Create a new PDF document
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50,
+        bufferPages: true
+      });
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=mcqs.pdf');
+
+      // Pipe the PDF to the response
+      doc.pipe(res);
+
+      // Add each MCQ to the PDF
+      allMcqs.forEach((mcq, index) => {
+        if (index > 0) {
+          doc.addPage(); // Start each question on a new page
+        }
+
+        // Add topic and clinical scenario
+        doc.fontSize(16).text(`Topic: ${mcq.topic}`, { underline: true });
+        doc.moveDown();
+        doc.fontSize(12).text(mcq.clinical_scenario);
+        doc.moveDown();
+
+        // Add question
+        doc.fontSize(14).text('Question:', { underline: true });
+        doc.fontSize(12).text(mcq.question);
+        doc.moveDown();
+
+        // Add options
+        doc.fontSize(14).text('Options:', { underline: true });
+        Object.entries(mcq.options).forEach(([key, value]) => {
+          doc.fontSize(12).text(`${key}. ${value}`);
+        });
+        doc.moveDown();
+
+        // Add correct answer
+        doc.fontSize(14).text('Correct Answer:', { underline: true });
+        doc.fontSize(12).text(mcq.correct_answer);
+        doc.moveDown();
+
+        // Add explanation
+        doc.fontSize(14).text('Explanation:', { underline: true });
+        doc.fontSize(12).text(mcq.explanation);
+      });
+
+      // Finalize the PDF
+      doc.end();
+    } catch (error: any) {
+      console.error('PDF export error:', error);
+      res.status(500).json({ message: error.message || "Failed to export MCQs to PDF" });
     }
   });
 
@@ -158,15 +203,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "MCQ not found" });
       }
 
-      const mcqData = JSON.parse(mcq.generated_text);
-      const formattedMcq = {
-        id: mcq.id,
-        topic: mcq.topic,
-        ...mcqData,
-        createdAt: mcq.created_at
-      };
-
-      res.json(formattedMcq);
+      res.json(mcq);
     } catch (error: any) {
       console.error('Get MCQ error:', error);
       res.status(500).json({ message: error.message || "Failed to fetch MCQ" });
