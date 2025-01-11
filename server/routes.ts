@@ -48,25 +48,25 @@ Please follow these steps to create the question:
    - Provide option-specific explanations for why each option is correct or incorrect.
    ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}
 
-Format your response in the following structure, using clear section headers:
+Return your response in this EXACT format with these EXACT section headers:
 
 CLINICAL SCENARIO:
-[Your clinical scenario here]
+[Clinical scenario text]
 
 QUESTION:
-[Your question here]
+[Question text]
 
 OPTIONS:
-A) [First option]
-B) [Second option]
-C) [Third option]
-D) [Fourth option]
-E) [Fifth option]
+A) [Option A text]
+B) [Option B text]
+C) [Option C text]
+D) [Option D text]
+E) [Option E text]
 
 CORRECT ANSWER: [Single letter A-E]
 
 EXPLANATION:
-[Your detailed explanation here]`;
+[Detailed explanation text]`;
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
@@ -78,27 +78,50 @@ EXPLANATION:
         throw new Error("No content generated");
       }
 
-      const parsePrompt = `Given this MCQ text, extract and format the content into sections. Return only the parsed content as text, do not include any JSON formatting or code blocks.
+      // Parse the generated content into structured sections
+      const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
+      const parsedContent = {
+        clinicalScenario: "",
+        question: "",
+        options: {
+          A: "",
+          B: "",
+          C: "",
+          D: "",
+          E: "",
+        },
+        correctAnswer: "",
+        explanation: "",
+      };
 
-Here's the MCQ to parse:
+      sections.forEach(section => {
+        const [header, ...content] = section.split(":\n");
+        const sectionContent = content.join(":\n").trim();
 
-${generatedContent}`;
-
-      const parsedCompletion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into clear sections. Return only the parsed content without any JSON structure or additional text."
-          },
-          { role: "user", content: parsePrompt }
-        ]
+        switch (header.trim()) {
+          case "CLINICAL SCENARIO":
+            parsedContent.clinicalScenario = sectionContent;
+            break;
+          case "QUESTION":
+            parsedContent.question = sectionContent;
+            break;
+          case "OPTIONS":
+            const options = sectionContent.split("\n");
+            options.forEach(option => {
+              const [letter, text] = option.split(") ");
+              if (letter && text) {
+                parsedContent.options[letter.trim() as keyof typeof parsedContent.options] = text.trim();
+              }
+            });
+            break;
+          case "CORRECT ANSWER":
+            parsedContent.correctAnswer = sectionContent.trim();
+            break;
+          case "EXPLANATION":
+            parsedContent.explanation = sectionContent;
+            break;
+        }
       });
-
-      const parsedContent = parsedCompletion.choices[0].message.content;
-      if (!parsedContent) {
-        throw new Error("Failed to parse MCQ content");
-      }
 
       res.json({
         raw: generatedContent,

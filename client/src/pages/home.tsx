@@ -9,7 +9,7 @@ import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
 import { SaveMCQDialog } from "@/components/save-mcq-dialog";
 import { PasswordOverlay } from "@/components/password-overlay";
-import { generateMCQ, getMCQHistory, saveMCQ } from "@/lib/api";
+import { generateMCQ, getMCQHistory, saveMCQ, deleteMCQ } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -24,8 +24,9 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingMCQ, setEditingMCQ] = useState<MCQHistoryItem | null>(null);
+  const [currentMCQTopic, setCurrentMCQTopic] = useState<string>("");
 
-  const { data: mcqHistory = [], refetch: refetchHistory } = useQuery<MCQHistoryItem[]>({
+  const { data: mcqHistory = [] } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
     enabled: isAuthenticated,
   });
@@ -36,6 +37,7 @@ export default function Home() {
       const result = await generateMCQ(data);
       setGeneratedMCQ(result.raw);
       setParsedMCQ(result.parsed);
+      setCurrentMCQTopic(data.topic);
       setShowEditor(true);
     } catch (error: any) {
       console.error('MCQ generation error:', error);
@@ -63,7 +65,7 @@ export default function Home() {
     try {
       await saveMCQ({
         name,
-        topic: "Medical Topic", // You might want to store this from the form
+        topic: currentMCQTopic,
         rawContent: generatedMCQ,
         parsedContent: parsedMCQ,
       });
@@ -75,6 +77,8 @@ export default function Home() {
 
       queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
       setShowSaveDialog(false);
+      setShowEditor(false);
+      setEditingMCQ(null);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -90,12 +94,13 @@ export default function Home() {
     setEditingMCQ(mcq);
     setGeneratedMCQ(mcq.raw_content);
     setParsedMCQ(mcq.parsed_content);
+    setCurrentMCQTopic(mcq.topic);
     setShowEditor(true);
   };
 
   const handleDeleteMCQ = async (id: number) => {
     try {
-      await fetch(`/api/mcq/${id}`, { method: 'DELETE' });
+      await deleteMCQ(id);
       queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
       toast({
         title: "Success",
@@ -140,21 +145,6 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Display Generated MCQ */}
-          {!isGenerating && !showEditor && generatedMCQ && (
-            <div className="w-full max-w-4xl mx-auto">
-              <MCQDisplay mcqText={generatedMCQ} />
-              <div className="mt-4 flex justify-center gap-4">
-                <Button onClick={() => setShowEditor(true)}>
-                  Edit MCQ
-                </Button>
-                <Button onClick={() => setShowSaveDialog(true)}>
-                  Save to Library
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Edit MCQ Form */}
           {!isGenerating && showEditor && parsedMCQ && (
             <div className="w-full max-w-4xl mx-auto">
@@ -174,6 +164,8 @@ export default function Home() {
                     onClick={() => {
                       setShowEditor(false);
                       setEditingMCQ(null);
+                      setGeneratedMCQ(null);
+                      setParsedMCQ(null);
                     }}
                     className="mt-4"
                   >
