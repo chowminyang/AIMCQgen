@@ -102,7 +102,7 @@ ${generatedContent}`;
         messages: [
           { 
             role: "system", 
-            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Only output valid JSON." 
+            content: "You are a precise MCQ parser. Extract the MCQ sections and format them into a JSON object exactly matching the specified structure. Return only the raw JSON object without any markdown formatting, code blocks, or additional text." 
           },
           { role: "user", content: parsePrompt }
         ]
@@ -114,7 +114,13 @@ ${generatedContent}`;
       }
 
       try {
-        const parsedJson = JSON.parse(parsedContent);
+        // Clean up the response by removing any markdown code block markers
+        const cleanedContent = parsedContent
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+
+        const parsedJson = JSON.parse(cleanedContent);
         res.json({
           raw: generatedContent,
           parsed: parsedJson
