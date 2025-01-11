@@ -46,17 +46,41 @@ Please follow these steps to create the question:
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   ${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}`;
+
+Format your response in the following structure:
+
+CLINICAL SCENARIO:
+[Your clinical scenario here]
+
+QUESTION:
+[Your question here]
+
+OPTIONS:
+A) [First option]
+B) [Second option]
+C) [Third option]
+D) [Fourth option]
+E) [Fifth option]
+
+CORRECT ANSWER: [Single letter A-E]
+
+EXPLANATION:
+[Your detailed explanation here]
+
+${referenceText ? `   - Use this reference text in your explanations where relevant: ${referenceText}` : ''}`;
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }]
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7
       });
 
       const generatedContent = completion.choices[0].message.content;
       if (!generatedContent) {
         throw new Error("No content generated");
       }
+
+      console.log("Generated MCQ:", generatedContent); // Add logging to debug
 
       // Return raw text only - parsing will be done client-side
       res.json({ generated: generatedContent });
