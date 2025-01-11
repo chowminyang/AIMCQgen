@@ -8,6 +8,7 @@ import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
 import { PasswordOverlay } from "@/components/password-overlay";
 import { generateMCQ, getMCQHistory } from "@/lib/api";
+import { parseMCQText } from "@/lib/utils";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -29,8 +30,13 @@ export default function Home() {
     setIsGenerating(true);
     try {
       const result = await generateMCQ(data);
-      setGeneratedMCQ(result.raw);
-      setParsedMCQ(result.parsed);
+      setGeneratedMCQ(result.generated);
+
+      const parsed = parseMCQText(result.generated);
+      if (!parsed) {
+        throw new Error("Failed to parse generated MCQ");
+      }
+      setParsedMCQ(parsed);
       setEditingMCQ(null);
       setShowEditor(false);
     } catch (error: any) {
@@ -58,6 +64,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           name,
+          topic: editingMCQ?.topic || "General",
           ...parsedMCQ,
         }),
       });
@@ -193,22 +200,12 @@ export default function Home() {
                     mcq={parsedMCQ}
                     onSave={editingMCQ ? handleSaveEdits : undefined}
                   />
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowEditor(false);
-                      setEditingMCQ(null);
-                    }}
-                    className="mt-4"
-                  >
-                    Back to View
-                  </Button>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* MCQ History */}
+          {/* MCQ Library */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle>MCQ Library</CardTitle>
