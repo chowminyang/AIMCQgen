@@ -2,10 +2,28 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Setup session middleware before any routes
+const MemoryStore = createMemoryStore(session);
+app.use(session({
+  secret: process.env.REPL_ID || "mcq-session-secret",
+  resave: true,
+  saveUninitialized: false,
+  store: new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: true
+  }
+}));
 
 // Logging middleware
 app.use((req, res, next) => {

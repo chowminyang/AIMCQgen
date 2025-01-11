@@ -7,7 +7,7 @@ import { desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Create MCQ
-  app.post("/api/mcqs", requireAuth, async (req, res) => {
+  app.post("/api/mcqs", async (req, res) => {
     try {
       const { question, options, correctAnswer, topic } = req.body;
       const newMcq = await db.insert(mcqs).values({
@@ -24,7 +24,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get all MCQs
-  app.get("/api/mcqs", requireAuth, async (req, res) => {
+  app.get("/api/mcqs", async (req, res) => {
     try {
       const allMcqs = await db.select().from(mcqs)
         .orderBy(desc(mcqs.createdAt));
@@ -35,8 +35,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // MCQ Generation endpoint (protected)
-  app.post("/api/mcq/generate", requireAuth, async (req, res) => {
+  // MCQ Generation endpoint
+  app.post("/api/mcq/generate", async (req, res) => {
     try {
       const { topic, purpose, referenceText } = req.body;
       // TODO: Implement OpenAI integration
@@ -47,8 +47,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Save MCQ endpoint (protected)
-  app.post("/api/mcq/save", requireAuth, async (req, res) => {
+  // Save MCQ endpoint
+  app.post("/api/mcq/save", async (req, res) => {
     try {
       const { topic, purpose, referenceText, generatedText, editedText } = req.body;
       const newMcq = await db.insert(mcqs).values({
@@ -67,8 +67,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get MCQ history endpoint (protected)
-  app.get("/api/mcq/history", requireAuth, async (req, res) => {
+  // Get MCQ history endpoint
+  app.get("/api/mcq/history", async (req, res) => {
     try {
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.createdAt));
       res.json(mcqHistory);

@@ -1,7 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import session from "express-session";
-import createMemoryStore from "memorystore";
 
 // Authentication password
 const APP_PASSWORD = "mcq123"; // Simple development password
@@ -21,6 +19,7 @@ declare module 'express-session' {
 
 // Authentication middleware
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  console.log('Session state:', req.session); // Debug log
   if (!req.session.authenticated) {
     return res.status(401).json({ message: "Please login first" });
   }
@@ -29,21 +28,6 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
 
 // Setup authentication routes
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
-
-  app.use(session({
-    secret: process.env.REPL_ID || "mcq-session-secret",
-    resave: false,
-    saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
-
   // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
@@ -55,16 +39,25 @@ export function setupAuth(app: Express) {
       }
 
       const { password } = result.data;
-      if (password !== APP_PASSWORD) {
+      // Case-insensitive password comparison
+      if (password.toLowerCase() !== APP_PASSWORD.toLowerCase()) {
         return res.status(401).json({ message: "Invalid password" });
       }
 
       req.session.authenticated = true;
       req.session.userId = 1;
 
-      res.json({
-        message: "Login successful",
-        user: { id: 1 }
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        console.log('Session after login:', req.session); // Debug log
+        res.json({
+          message: "Login successful",
+          user: { id: 1 }
+        });
       });
     } catch (error: any) {
       console.error('Login error:', error);
