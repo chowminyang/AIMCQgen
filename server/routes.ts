@@ -2,62 +2,64 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql, inArray } from "drizzle-orm";
 import OpenAI from "openai";
+import PDFDocument from "pdfkit";
+import XLSX from "xlsx";
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
-
-Please follow these steps to create the question:
-
-1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
-
-2. Clinical Scenario:
-   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
-   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
-   - Use ONLY standard international units with reference ranges for any test results.
-   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
-
-3. Question:
-   - Test second-order thinking skills about {topic}.
-   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-   - Do not reveal or hint at the diagnosis in the question.
-   - Avoid including obvious investigations or management options that would immediately give away the answer.
-
-4. Multiple Choice Options:
-   - Provide 5 options (A-E) in alphabetical order:
-     a) One best and correct answer
-     b) One correct answer, but not the best option
-     c-e) Plausible options that might be correct, but are not the best answer
-   - Keep the length of all options consistent.
-   - Avoid misleading or ambiguously worded distractors.
-
-5. Correct Answer and Feedback:
-   - Identify the correct answer and explain why it is the best option.
-   - Provide option-specific explanations for why each option is correct or incorrect.
-
-Return your response in this EXACT format with these EXACT section headers:
-
-NAME:
-[MCQ name]
-
-CLINICAL SCENARIO:
-[Clinical scenario text]
-
-QUESTION:
-[Question text]
-
-OPTIONS:
-A) [Option A text]
-B) [Option B text]
-C) [Option C text]
-D) [Option D text]
-E) [Option E text]
-
-CORRECT ANSWER: [Single letter A-E]
-
-EXPLANATION:
-[Detailed explanation text]`;
+10:
+11:Please follow these steps to create the question:
+12:
+13:1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
+14:
+15:2. Clinical Scenario:
+16:   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
+17:   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+18:   - Use ONLY standard international units with reference ranges for any test results.
+19:   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+20:
+21:3. Question:
+22:   - Test second-order thinking skills about {topic}.
+23:   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+24:   - Do not reveal or hint at the diagnosis in the question.
+25:   - Avoid including obvious investigations or management options that would immediately give away the answer.
+26:
+27:4. Multiple Choice Options:
+28:   - Provide 5 options (A-E) in alphabetical order:
+29:     a) One best and correct answer
+30:     b) One correct answer, but not the best option
+31:     c-e) Plausible options that might be correct, but are not the best answer
+32:   - Keep the length of all options consistent.
+33:   - Avoid misleading or ambiguously worded distractors.
+34:
+35:5. Correct Answer and Feedback:
+36:   - Identify the correct answer and explain why it is the best option.
+37:   - Provide option-specific explanations for why each option is correct or incorrect.
+38:
+39:Return your response in this EXACT format with these EXACT section headers:
+40:
+41:NAME:
+42:[MCQ name]
+43:
+44:CLINICAL SCENARIO:
+45:[Clinical scenario text]
+46:
+47:QUESTION:
+48:[Question text]
+49:
+50:OPTIONS:
+51:A) [Option A text]
+52:B) [Option B text]
+53:C) [Option C text]
+54:D) [Option D text]
+55:E) [Option E text]
+56:
+57:CORRECT ANSWER: [Single letter A-E]
+58:
+59:EXPLANATION:
+60:[Detailed explanation text]`;
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -302,6 +304,310 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Update prompt error:', error);
       res.status(500).send(error.message || "Failed to update prompt");
+    }
+  });
+
+  // Export to XLSX endpoint
+  app.get("/api/mcq/export/xlsx", async (req, res) => {
+    try {
+      const { ids } = req.query;
+      let mcqData;
+
+      if (ids) {
+        const mcqIds = (ids as string).split(',').map(Number);
+        mcqData = await db.select().from(mcqs)
+          .where(inArray(mcqs.id, mcqIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqData = await db.select().from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws_data = mcqData.map(mcq => ({
+        'Name': mcq.name,
+        'Topic': mcq.topic,
+        'Clinical Scenario': mcq.parsed_content.clinicalScenario,
+        'Question': mcq.parsed_content.question,
+        'Option A': mcq.parsed_content.options.A,
+        'Option B': mcq.parsed_content.options.B,
+        'Option C': mcq.parsed_content.options.C,
+        'Option D': mcq.parsed_content.options.D,
+        'Option E': mcq.parsed_content.options.E,
+        'Correct Answer': mcq.parsed_content.correctAnswer,
+        'Explanation': mcq.parsed_content.explanation,
+        'Rating': mcq.rating || 0,
+        'Created At': new Date(mcq.created_at).toLocaleString(),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(ws_data);
+
+      // Adjust column widths for better readability
+      const colWidths = [
+        { wch: 20 }, // Name
+        { wch: 15 }, // Topic
+        { wch: 40 }, // Clinical Scenario
+        { wch: 30 }, // Question
+        { wch: 25 }, // Option A
+        { wch: 25 }, // Option B
+        { wch: 25 }, // Option C
+        { wch: 25 }, // Option D
+        { wch: 25 }, // Option E
+        { wch: 15 }, // Correct Answer
+        { wch: 40 }, // Explanation
+        { wch: 10 }, // Rating
+        { wch: 20 }, // Created At
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "MCQs");
+
+      // Generate buffer with proper encoding
+      const excelBuffer = XLSX.write(wb, { 
+        type: 'buffer', 
+        bookType: 'xlsx',
+        bookSST: false,
+        compression: true
+      });
+
+      res.setHeader('Content-Disposition', 'attachment; filename=mcq-export.xlsx');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.end(excelBuffer);
+
+    } catch (error: any) {
+      console.error('XLSX export error:', error);
+      res.status(500).send(error.message || "Failed to export to XLSX");
+    }
+  });
+
+  // Export to PDF endpoint
+  app.get("/api/mcq/export/pdf", async (req, res) => {
+    try {
+      const { ids } = req.query;
+      let mcqData;
+
+      if (ids) {
+        const mcqIds = (ids as string).split(',').map(Number);
+        mcqData = await db.select().from(mcqs)
+          .where(inArray(mcqs.id, mcqIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqData = await db.select().from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
+
+      // Create PDF document with better formatting
+      const doc = new PDFDocument({
+        margin: 50,
+        size: 'A4',
+        bufferPages: true,
+        autoFirstPage: true,
+        info: {
+          Title: 'MCQ Export',
+          Author: 'MCQ Generator',
+          Subject: 'Medical MCQ Questions',
+          Keywords: 'mcq, medical, questions',
+          CreationDate: new Date()
+        }
+      });
+
+      // Create a write stream buffer
+      const chunks: any[] = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=mcq-export.pdf');
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.end(pdfBuffer);
+      });
+
+      // Add content with improved formatting
+      doc.font('Helvetica-Bold').fontSize(24).text('MCQ Export', { align: 'center' });
+      doc.moveDown(2);
+
+      mcqData.forEach((mcq, index) => {
+        // Add MCQ number and name
+        doc.font('Helvetica-Bold').fontSize(16)
+          .text(`${index + 1}. ${mcq.name}`, { underline: true });
+
+        doc.font('Helvetica').fontSize(12)
+          .text(`Topic: ${mcq.topic}`, { color: 'grey' });
+        doc.moveDown();
+
+        // Clinical Scenario
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Clinical Scenario:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(mcq.parsed_content.clinicalScenario, { align: 'justify' });
+        doc.moveDown();
+
+        // Question
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Question:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(mcq.parsed_content.question, { align: 'justify' });
+        doc.moveDown();
+
+        // Options
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Options:', { underline: true });
+        Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
+          doc.font('Helvetica').fontSize(12)
+            .text(`${letter}) ${text}`, { indent: 20 });
+        });
+        doc.moveDown();
+
+        // Correct Answer
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Correct Answer:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(`Option ${mcq.parsed_content.correctAnswer}`);
+        doc.moveDown();
+
+        // Explanation
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Explanation:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(mcq.parsed_content.explanation, { align: 'justify' });
+        doc.moveDown();
+
+        // Rating
+        doc.font('Helvetica').fontSize(10)
+          .text(`Rating: ${mcq.rating || 0} stars`, { color: 'grey' });
+
+        // Add a page break between MCQs
+        if (index < mcqData.length - 1) {
+          doc.addPage();
+        }
+      });
+
+      // Finalize PDF
+      doc.end();
+
+    } catch (error: any) {
+      console.error('PDF export error:', error);
+      res.status(500).send(error.message || "Failed to export to PDF");
+    }
+  });
+
+  // Export to Practice PDF endpoint (without answers)
+  app.get("/api/mcq/export/pdf/learner", async (req, res) => {
+    try {
+      const { ids } = req.query;
+      let mcqData;
+
+      if (ids) {
+        const mcqIds = (ids as string).split(',').map(Number);
+        mcqData = await db.select().from(mcqs)
+          .where(inArray(mcqs.id, mcqIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqData = await db.select().from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
+
+      // Create PDF document with better formatting
+      const doc = new PDFDocument({
+        margin: 50,
+        size: 'A4',
+        bufferPages: true,
+        autoFirstPage: true,
+        info: {
+          Title: 'MCQ Practice Set',
+          Author: 'MCQ Generator',
+          Subject: 'Medical MCQ Practice Questions',
+          Keywords: 'mcq, medical, practice, questions',
+          CreationDate: new Date()
+        }
+      });
+
+      // Create a write stream buffer
+      const chunks: any[] = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=mcq-practice.pdf');
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.end(pdfBuffer);
+      });
+
+      // Add content
+      doc.font('Helvetica-Bold').fontSize(24)
+        .text('MCQ Practice Set', { align: 'center' });
+      doc.moveDown(2);
+
+      mcqData.forEach((mcq, index) => {
+        // Add MCQ number and name
+        doc.font('Helvetica-Bold').fontSize(16)
+          .text(`${index + 1}. ${mcq.name}`, { underline: true });
+
+        doc.font('Helvetica').fontSize(12)
+          .text(`Topic: ${mcq.topic}`, { color: 'grey' });
+        doc.moveDown();
+
+        // Clinical Scenario
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Clinical Scenario:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(mcq.parsed_content.clinicalScenario, { align: 'justify' });
+        doc.moveDown();
+
+        // Question
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Question:', { underline: true });
+        doc.font('Helvetica').fontSize(12)
+          .text(mcq.parsed_content.question, { align: 'justify' });
+        doc.moveDown();
+
+        // Options
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Options:', { underline: true });
+        Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
+          doc.font('Helvetica').fontSize(12)
+            .text(`${letter}) ${text}`, { indent: 20 });
+        });
+        doc.moveDown();
+
+        // Answer space
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('Your Answer: _____');
+        doc.moveDown();
+
+        if (index < mcqData.length - 1) {
+          doc.addPage();
+        }
+      });
+
+      // Add answer sheet at the end
+      doc.addPage();
+      doc.font('Helvetica-Bold').fontSize(20)
+        .text('Answer Sheet', { align: 'center' });
+      doc.moveDown();
+
+      // Create a grid for answers
+      const columns = 4;
+      const rows = Math.ceil(mcqData.length / columns);
+
+      for (let row = 0; row < rows; row++) {
+        const answers = mcqData.slice(row * columns, (row + 1) * columns);
+        const line = answers.map((mcq, idx) => {
+          const num = row * columns + idx + 1;
+          return `${num}. ${mcq.parsed_content.correctAnswer}`.padEnd(15);
+        }).join('  ');
+
+        doc.font('Helvetica').fontSize(12).text(line);
+        doc.moveDown(0.5);
+      }
+
+      // Finalize PDF
+      doc.end();
+
+    } catch (error: any) {
+      console.error('PDF export error:', error);
+      res.status(500).send(error.message || "Failed to export to PDF");
     }
   });
 
