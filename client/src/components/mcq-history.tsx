@@ -7,21 +7,24 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText, GraduationCap } from "lucide-react";
+import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText, GraduationCap, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { MCQHistoryItem } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface MCQHistoryProps {
   items: MCQHistoryItem[];
   onEdit: (mcq: MCQHistoryItem) => void;
   onDelete: (id: number) => void;
+  onRate: (id: number, rating: number) => void;
 }
 
-export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
+export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps) {
   const { toast } = useToast();
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [selectedMcqs, setSelectedMcqs] = useState<Set<number>>(new Set());
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -34,9 +37,10 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     });
   };
 
-  const handleExportXLSX = async () => {
+  const handleExportXLSX = async (selectedOnly: boolean = false) => {
     try {
-      const response = await fetch('/api/mcq/export/xlsx', {
+      const queryParams = selectedOnly ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
+      const response = await fetch(`/api/mcq/export/xlsx${queryParams}`, {
         method: 'GET',
       });
 
@@ -65,12 +69,13 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     }
   };
 
-  const handleExportPDF = async (type: 'full' | 'learner' = 'full') => {
+  const handleExportPDF = async (type: 'full' | 'learner' = 'full', selectedOnly: boolean = false) => {
     try {
+      const queryParams = selectedOnly ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
       const endpoint = type === 'learner' ? '/api/mcq/export/pdf/learner' : '/api/mcq/export/pdf';
       const filename = type === 'learner' ? 'mcq-practice' : 'mcq-library';
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${endpoint}${queryParams}`, {
         method: 'GET',
       });
 
@@ -99,6 +104,37 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     }
   };
 
+  const toggleSelection = (id: number) => {
+    const newSelection = new Set(selectedMcqs);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedMcqs(newSelection);
+  };
+
+  const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: number, rating: number) => void; itemId: number }) => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRate(itemId, star);
+            }}
+            className={`hover:text-yellow-400 transition-colors ${
+              star <= (rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+            }`}
+          >
+            <Star className="h-4 w-4" />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   if (items.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -107,44 +143,61 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     );
   }
 
+  const hasSelection = selectedMcqs.size > 0;
+
   return (
     <>
-      <div className="mb-4 flex justify-end gap-2">
-        <Button 
-          variant="outline" 
-          onClick={handleExportXLSX}
-          className="flex items-center gap-2"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Export to Excel
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => handleExportPDF('full')}
-          className="flex items-center gap-2"
-        >
-          <FileText className="h-4 w-4" />
-          Export to PDF
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => handleExportPDF('learner')}
-          className="flex items-center gap-2"
-        >
-          <GraduationCap className="h-4 w-4" />
-          Export Practice PDF
-        </Button>
+      <div className="mb-4 flex flex-wrap justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {selectedMcqs.size} MCQ{selectedMcqs.size !== 1 ? 's' : ''} selected
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => handleExportXLSX(hasSelection)}
+            className="flex items-center gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Export {hasSelection ? 'Selected ' : ''}to Excel
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => handleExportPDF('full', hasSelection)}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Export {hasSelection ? 'Selected ' : ''}to PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => handleExportPDF('learner', hasSelection)}
+            className="flex items-center gap-2"
+          >
+            <GraduationCap className="h-4 w-4" />
+            Export {hasSelection ? 'Selected ' : ''}Practice PDF
+          </Button>
+        </div>
       </div>
 
       <Accordion type="single" collapsible className="w-full">
         {items.map((item) => (
           <AccordionItem key={item.id} value={item.id.toString()}>
             <AccordionTrigger className="flex items-center gap-4">
-              <div className="flex-1 text-left">
-                <div className="font-medium">{item.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  Topic: {item.topic} • {format(new Date(item.created_at), "PPpp")}
+              <div className="flex items-center gap-4 flex-1">
+                <Checkbox
+                  checked={selectedMcqs.has(item.id)}
+                  onCheckedChange={() => toggleSelection(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Topic: {item.topic} • {format(new Date(item.created_at), "PPpp")}
+                  </div>
                 </div>
+                <StarRating rating={item.rating} onRate={onRate} itemId={item.id} />
               </div>
               <div className="flex items-center gap-2">
                 <Button

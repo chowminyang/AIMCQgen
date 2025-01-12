@@ -33,7 +33,7 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  const { data: promptData } = useQuery({
+  const { data: promptData } = useQuery<{ prompt: string }>({
     queryKey: ['/api/prompt'],
     enabled: isAuthenticated,
   });
@@ -69,6 +69,30 @@ export default function Home() {
       });
     },
   });
+
+  const handleRateMCQ = async (id: number, rating: number) => {
+    try {
+      await fetch(`/api/mcq/${id}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rating }),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
+      toast({
+        title: "Success",
+        description: "MCQ rating has been updated",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update MCQ rating",
+      });
+    }
+  };
 
   const onGenerate = async (data: MCQFormData) => {
     setIsGenerating(true);
@@ -231,11 +255,12 @@ export default function Home() {
                 items={mcqHistory}
                 onEdit={handleEditMCQ}
                 onDelete={handleDeleteMCQ}
+                onRate={handleRateMCQ}
               />
             </CardContent>
           </Card>
 
-          {/* Prompt Editor - Moved below MCQ Library */}
+          {/* Prompt Editor */}
           <div className="w-full max-w-4xl mx-auto">
             <PromptEditor
               currentPrompt={promptData?.prompt || ''}
