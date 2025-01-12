@@ -63,22 +63,77 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export function registerRoutes(app: Express): Server {
-  // Get current prompt
-  app.get("/api/prompt", async (_req, res) => {
-    res.json({ prompt: currentPrompt });
-  });
+function parseGeneratedContent(content: string) {
+  const sections = content.split(/\n\n(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
 
-  // Update prompt
-  app.post("/api/prompt", async (req, res) => {
-    const { prompt } = req.body;
-    if (!prompt) {
-      return res.status(400).send("Prompt is required");
+  const parsedContent = {
+    name: "",
+    clinicalScenario: "",
+    question: "",
+    options: {
+      A: "",
+      B: "",
+      C: "",
+      D: "",
+      E: "",
+    },
+    correctAnswer: "",
+    explanation: "",
+  };
+
+  for (const section of sections) {
+    const [header, ...contentLines] = section.split(/:\s*/);
+    const trimmedHeader = header.trim().toUpperCase();
+    const sectionContent = contentLines.join(":").trim();
+
+    switch (trimmedHeader) {
+      case "NAME":
+        parsedContent.name = sectionContent;
+        break;
+      case "CLINICAL SCENARIO":
+        parsedContent.clinicalScenario = sectionContent;
+        break;
+      case "QUESTION":
+        parsedContent.question = sectionContent;
+        break;
+      case "OPTIONS":
+        const options = sectionContent.split(/\n/);
+        options.forEach(option => {
+          const match = option.match(/^([A-E])\)\s*(.+)$/);
+          if (match) {
+            const [, letter, text] = match;
+            parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
+          }
+        });
+        break;
+      case "CORRECT ANSWER":
+        // Extract just the letter A-E, ignore any additional text
+        const answerMatch = sectionContent.match(/[A-E]/);
+        parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+        break;
+      case "EXPLANATION":
+        parsedContent.explanation = sectionContent;
+        break;
     }
-    currentPrompt = prompt;
-    res.json({ prompt: currentPrompt });
-  });
+  }
 
+  // Validate parsed content
+  const isValid = parsedContent.name && 
+                 parsedContent.clinicalScenario && 
+                 parsedContent.question && 
+                 Object.values(parsedContent.options).every(Boolean) &&
+                 /^[A-E]$/.test(parsedContent.correctAnswer) &&
+                 parsedContent.explanation;
+
+  if (!isValid) {
+    console.error("Invalid parsed content:", parsedContent);
+    throw new Error("Failed to parse generated MCQ content correctly");
+  }
+
+  return parsedContent;
+}
+
+export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
@@ -103,54 +158,11 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content generated");
       }
 
-      // Parse the generated content into structured sections
-      const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
-      const parsedContent = {
-        name: "",
-        clinicalScenario: "",
-        question: "",
-        options: {
-          A: "",
-          B: "",
-          C: "",
-          D: "",
-          E: "",
-        },
-        correctAnswer: "",
-        explanation: "",
-      };
-
-      sections.forEach(section => {
-        const [header, ...content] = section.split(":\n");
-        const sectionContent = content.join(":\n").trim();
-
-        switch (header.trim()) {
-          case "NAME":
-            parsedContent.name = sectionContent;
-            break;
-          case "CLINICAL SCENARIO":
-            parsedContent.clinicalScenario = sectionContent;
-            break;
-          case "QUESTION":
-            parsedContent.question = sectionContent;
-            break;
-          case "OPTIONS":
-            const options = sectionContent.split("\n");
-            options.forEach(option => {
-              const [letter, text] = option.split(") ");
-              if (letter && text) {
-                parsedContent.options[letter.trim() as keyof typeof parsedContent.options] = text.trim();
-              }
-            });
-            break;
-          case "CORRECT ANSWER":
-            const answerMatch = sectionContent.match(/[A-E]$/);
-            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
-            break;
-          case "EXPLANATION":
-            parsedContent.explanation = sectionContent;
-            break;
-        }
+      const parsedContent = parseGeneratedContent(generatedContent);
+      console.log("Generated and parsed MCQ:", { 
+        name: parsedContent.name,
+        correctAnswer: parsedContent.correctAnswer,
+        optionsCount: Object.keys(parsedContent.options).length 
       });
 
       res.json({
@@ -168,7 +180,10 @@ export function registerRoutes(app: Express): Server {
     try {
       const { topic, rawContent, parsedContent } = req.body;
 
-      // Since name is part of parsedContent now, use that instead
+      if (!parsedContent?.name) {
+        return res.status(400).send("MCQ name is required");
+      }
+
       const [newMcq] = await db.insert(mcqs).values({
         name: parsedContent.name,
         topic,
@@ -210,52 +225,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get single MCQ endpoint
-  app.get("/api/mcq/:id", async (req, res) => {
-    try {
-      const mcqId = parseInt(req.params.id);
-      if (isNaN(mcqId)) {
-        return res.status(400).send("Invalid MCQ ID");
-      }
-
-      const [mcq] = await db.select().from(mcqs).where(eq(mcqs.id, mcqId));
-      if (!mcq) {
-        return res.status(404).send("MCQ not found");
-      }
-
-      res.json(mcq);
-    } catch (error: any) {
-      console.error('Get MCQ error:', error);
-      res.status(500).send(error.message || "Failed to fetch MCQ");
-    }
-  });
-
-  // Update MCQ rating
-  app.post("/api/mcq/:id/rate", async (req, res) => {
-    try {
-      const mcqId = parseInt(req.params.id);
-      const { rating } = req.body;
-
-      if (isNaN(mcqId)) {
-        return res.status(400).send("Invalid MCQ ID");
-      }
-
-      if (typeof rating !== 'number' || rating < 0 || rating > 5) {
-        return res.status(400).send("Rating must be a number between 0 and 5");
-      }
-
-      await db.update(mcqs)
-        .set({ rating })
-        .where(eq(mcqs.id, mcqId));
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error('Update rating error:', error);
-      res.status(500).send(error.message || "Failed to update rating");
-    }
-  });
-
-
   // Update MCQ endpoint
   app.put("/api/mcq/:id", async (req, res) => {
     try {
@@ -282,204 +251,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to XLSX with optional selection
-  app.get("/api/mcq/export/xlsx", async (req, res) => {
+  // Rate MCQ endpoint
+  app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : null;
+      const mcqId = parseInt(req.params.id);
+      const { rating } = req.body;
 
-      if (selectedIds) {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
       }
 
-      // Transform data for Excel
-      const data = mcqHistory.map(mcq => ({
-        Name: mcq.name,
-        Topic: mcq.topic,
-        Rating: mcq.rating || 0,
-        'Clinical Scenario': mcq.parsed_content.clinicalScenario,
-        Question: mcq.parsed_content.question,
-        'Option A': mcq.parsed_content.options.A,
-        'Option B': mcq.parsed_content.options.B,
-        'Option C': mcq.parsed_content.options.C,
-        'Option D': mcq.parsed_content.options.D,
-        'Option E': mcq.parsed_content.options.E,
-        'Correct Answer': mcq.parsed_content.correctAnswer,
-        Explanation: mcq.parsed_content.explanation,
-        'Created At': new Date(mcq.created_at).toLocaleString(),
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(data);
-      XLSX.utils.book_append_sheet(wb, ws, "MCQs");
-      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=mcq-library.xlsx');
-      res.send(buffer);
-    } catch (error: any) {
-      console.error('Export XLSX error:', error);
-      res.status(500).send(error.message || "Failed to export MCQs to Excel");
-    }
-  });
-
-  // Export to PDF with optional selection
-  app.get("/api/mcq/export/pdf", async (req, res) => {
-    try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : null;
-
-      if (selectedIds) {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
+      if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+        return res.status(400).send("Rating must be a number between 0 and 5");
       }
 
-      const doc = new PDFDocument();
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename=mcq-library.pdf');
-      doc.pipe(res);
+      await db.update(mcqs)
+        .set({ rating })
+        .where(eq(mcqs.id, mcqId));
 
-      mcqHistory.forEach((mcq, index) => {
-        if (index > 0) {
-          doc.addPage();
-        }
-
-        doc.font('Helvetica-Bold').fontSize(16).text(mcq.name);
-        doc.font('Helvetica').fontSize(12)
-          .text(`Topic: ${mcq.topic} • Rating: ${mcq.rating || 0}/5 stars`);
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Scenario');
-        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.clinicalScenario, {
-          width: 500,
-          align: 'justify'
-        });
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Question');
-        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.question, {
-          width: 500,
-          align: 'justify'
-        });
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Options');
-        Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.font('Helvetica').fontSize(12).text(`${letter}) ${text}`, {
-            width: 500,
-            indent: 20
-          });
-        });
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Correct Answer');
-        doc.font('Helvetica').fontSize(12).text(`Option ${mcq.parsed_content.correctAnswer}`);
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Explanation');
-        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.explanation, {
-          width: 500,
-          align: 'justify'
-        });
-
-        doc.moveDown()
-          .font('Helvetica-Oblique')
-          .fontSize(10)
-          .text(`Created: ${new Date(mcq.created_at).toLocaleString()}`, {
-            align: 'right'
-          });
-      });
-
-      doc.end();
+      res.json({ success: true });
     } catch (error: any) {
-      console.error('Export PDF error:', error);
-      res.status(500).send(error.message || "Failed to export MCQs to PDF");
-    }
-  });
-
-  // Export to PDF for learners (without answers) with optional selection
-  app.get("/api/mcq/export/pdf/learner", async (req, res) => {
-    try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : null;
-
-      if (selectedIds) {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db.select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
-      }
-
-      const doc = new PDFDocument();
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename=mcq-practice.pdf');
-      doc.pipe(res);
-
-      mcqHistory.forEach((mcq, index) => {
-        if (index > 0) {
-          doc.addPage();
-        }
-
-        doc.font('Helvetica-Bold').fontSize(16).text(`Question ${index + 1}`);
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Scenario');
-        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.clinicalScenario, {
-          width: 500,
-          align: 'justify'
-        });
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Question');
-        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.question, {
-          width: 500,
-          align: 'justify'
-        });
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').fontSize(14).text('Options');
-        Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.font('Helvetica').fontSize(12).text(`${letter}) ${text}`, {
-            width: 500,
-            indent: 20
-          });
-        });
-        doc.moveDown();
-
-        doc.moveDown()
-          .font('Helvetica')
-          .fontSize(12)
-          .text('Your Answer: _____', {
-            align: 'left'
-          })
-          .moveDown()
-          .text('Notes:', {
-            align: 'left'
-          })
-          .moveDown(3);
-      });
-
-      doc.end();
-    } catch (error: any) {
-      console.error('Export PDF error:', error);
-      res.status(500).send(error.message || "Failed to export MCQs to PDF");
+      console.error('Update rating error:', error);
+      res.status(500).send(error.message || "Failed to update rating");
     }
   });
 
