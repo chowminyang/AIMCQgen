@@ -29,7 +29,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf' | 'practice'>('excel');
   const [isExporting, setIsExporting] = useState(false);
-  const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
+  //const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
+
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -143,6 +144,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   };
 
   const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: number, rating: number) => void; itemId: number }) => {
+    const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
+
     return (
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (

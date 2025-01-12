@@ -39,24 +39,40 @@ const mcqFormSchema = z.object({
   explanation: z.string().min(1, "Explanation is required"),
 });
 
+type FormData = z.infer<typeof mcqFormSchema>;
+
 type Props = {
-  mcq: ParsedMCQ;
-  onSave: (data: ParsedMCQ) => void;
+  mcq: ParsedMCQ & { name: string };
+  onSave: (data: FormData) => void;
   isLoading?: boolean;
 };
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
-  const form = useForm<ParsedMCQ>({
+  const form = useForm<FormData>({
     resolver: zodResolver(mcqFormSchema),
     defaultValues: {
-      ...mcq,
-      correctAnswer: mcq.correctAnswer.trim(),
+      name: mcq.name || '',
+      clinicalScenario: mcq.clinicalScenario || '',
+      question: mcq.question || '',
+      options: mcq.options || {
+        A: '',
+        B: '',
+        C: '',
+        D: '',
+        E: '',
+      },
+      correctAnswer: mcq.correctAnswer?.trim() || '',
+      explanation: mcq.explanation || '',
     },
   });
 
+  const onSubmit = (data: FormData) => {
+    onSave(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -64,7 +80,10 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
             <FormItem>
               <FormLabel>MCQ Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter MCQ name..." {...field} />
+                <Input 
+                  placeholder="Enter MCQ name..." 
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,7 +135,10 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
               <FormItem>
                 <FormLabel>Option {letter}</FormLabel>
                 <FormControl>
-                  <Input placeholder={`Enter option ${letter}...`} {...field} />
+                  <Input 
+                    placeholder={`Enter option ${letter}...`} 
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

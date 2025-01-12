@@ -59,6 +59,7 @@ CORRECT ANSWER: [Single letter A-E]
 EXPLANATION:
 [Detailed explanation text]`;
 
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -149,8 +150,9 @@ export function registerRoutes(app: Express): Server {
         .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }]
+        model: "gpt-4o", // Updated to use the correct model name
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -178,15 +180,15 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, rawContent, parsedContent } = req.body;
+      const { name, topic, rawContent, parsedContent } = req.body;
 
-      if (!parsedContent?.name) {
+      if (!parsedContent || !name || name.trim() === '') {
         return res.status(400).send("MCQ name is required");
       }
 
       const [newMcq] = await db.insert(mcqs).values({
-        name: parsedContent.name,
-        topic,
+        name: name.trim(),
+        topic: topic.trim(),
         raw_content: rawContent,
         parsed_content: parsedContent,
       }).returning();
@@ -273,6 +275,26 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Update rating error:', error);
       res.status(500).send(error.message || "Failed to update rating");
+    }
+  });
+
+  // Get system prompt endpoint
+  app.get("/api/prompt", (_req, res) => {
+    res.json({ prompt: currentPrompt });
+  });
+
+  // Update system prompt endpoint
+  app.post("/api/prompt", (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (typeof prompt !== 'string' || !prompt.trim()) {
+        return res.status(400).send("Prompt is required");
+      }
+      currentPrompt = prompt.trim();
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Update prompt error:', error);
+      res.status(500).send(error.message || "Failed to update prompt");
     }
   });
 
