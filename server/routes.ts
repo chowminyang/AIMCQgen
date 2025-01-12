@@ -92,7 +92,18 @@ export function registerRoutes(app: Express): Server {
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [{ role: "user", content: prompt }]
+        messages: [
+          {
+            role: "system",
+            content: "You are a medical education expert. Format your response exactly as specified in the prompt, using the exact headers provided."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -100,8 +111,10 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content generated");
       }
 
+      console.log("Generated content:", generatedContent);
+
       // Parse the generated content into structured sections
-      const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
+      const sections = generatedContent.split(/\n\s*\n(?=[A-Z][A-Z\s]+:)/);
       const parsedContent = {
         clinicalScenario: "",
         question: "",
@@ -116,11 +129,15 @@ export function registerRoutes(app: Express): Server {
         explanation: "",
       };
 
-      sections.forEach(section => {
-        const [header, ...content] = section.split(":\n");
-        const sectionContent = content.join(":\n").trim();
+      for (const section of sections) {
+        const [header, ...contentParts] = section.split(/:\s*/);
+        const sectionContent = contentParts.join(":").trim();
+        const headerKey = header.trim().toUpperCase();
 
-        switch (header.trim()) {
+        console.log(`Processing section: ${headerKey}`);
+        console.log(`Content: ${sectionContent.substring(0, 100)}...`);
+
+        switch (headerKey) {
           case "CLINICAL SCENARIO":
             parsedContent.clinicalScenario = sectionContent;
             break;
@@ -128,22 +145,47 @@ export function registerRoutes(app: Express): Server {
             parsedContent.question = sectionContent;
             break;
           case "OPTIONS":
-            const options = sectionContent.split("\n");
-            options.forEach(option => {
-              const [letter, text] = option.split(/[).]/).map(s => s.trim());
-              if (letter && text) {
-                parsedContent.options[letter as keyof typeof parsedContent.options] = text;
+            const optionLines = sectionContent.split('\n');
+            for (const line of optionLines) {
+              const match = line.match(/^([A-E])[).]\s*(.+)$/);
+              if (match) {
+                const [, letter, text] = match;
+                parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
               }
-            });
+            }
             break;
           case "CORRECT ANSWER":
             const answerMatch = sectionContent.match(/[A-E]/);
-            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+            if (answerMatch) {
+              parsedContent.correctAnswer = answerMatch[0];
+            }
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
             break;
         }
+      }
+
+      // Validate the parsed content
+      const missingFields = [];
+      if (!parsedContent.clinicalScenario) missingFields.push("Clinical Scenario");
+      if (!parsedContent.question) missingFields.push("Question");
+      if (!parsedContent.correctAnswer) missingFields.push("Correct Answer");
+      Object.entries(parsedContent.options).forEach(([letter, content]) => {
+        if (!content) missingFields.push(`Option ${letter}`);
+      });
+
+      if (missingFields.length > 0) {
+        console.error("Missing required fields:", missingFields);
+        console.error("Generated content:", generatedContent);
+        throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
+      }
+
+      console.log("Successfully parsed MCQ:", {
+        clinicalScenario: parsedContent.clinicalScenario.substring(0, 50) + "...",
+        question: parsedContent.question.substring(0, 50) + "...",
+        correctAnswer: parsedContent.correctAnswer,
+        optionsCount: Object.keys(parsedContent.options).length,
       });
 
       res.json({
