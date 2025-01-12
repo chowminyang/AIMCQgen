@@ -1,6 +1,7 @@
 export interface MCQFormData {
   topic: string;
   referenceText?: string;
+  contributor?: string;
 }
 
 export interface MCQResponse {
@@ -31,4 +32,5 @@ export interface MCQHistoryItem {
   parsed_content: ParsedMCQ;
   created_at: string;
   rating: number;
+  contributor?: string;
 }
