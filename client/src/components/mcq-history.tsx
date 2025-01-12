@@ -29,6 +29,7 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf' | 'practice'>('excel');
   const [isExporting, setIsExporting] = useState(false);
+  const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -151,11 +152,23 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
               e.stopPropagation();
               onRate(itemId, star);
             }}
-            className={`hover:text-yellow-400 transition-colors ${
-              star <= (rating || 0) ? 'text-yellow-400' : 'text-gray-300'
-            }`}
+            onMouseEnter={() => setHoveredRating({ id: itemId, rating: star })}
+            onMouseLeave={() => setHoveredRating(null)}
+            className={`hover:scale-110 transition-all duration-200 ${
+              (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+              (hoveredRating?.id !== itemId && star <= (rating || 0))
+                ? 'text-yellow-400'
+                : 'text-gray-300'
+            } hover:text-yellow-400`}
           >
-            <Star className="h-4 w-4" />
+            <Star 
+              className={`h-4 w-4 transform ${
+                (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+                (hoveredRating?.id !== itemId && star <= (rating || 0))
+                  ? 'fill-current'
+                  : ''
+              }`}
+            />
           </button>
         ))}
       </div>
