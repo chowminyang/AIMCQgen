@@ -42,24 +42,19 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
     });
   };
 
-  const handleExport = async () => {
+  const handleExportXLSX = async () => {
     setIsExporting(true);
     try {
       const queryParams = selectedMcqs.size > 0 ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
-      const endpoint = exportType === 'excel' 
-        ? '/api/mcq/export/xlsx'
-        : exportType === 'practice' 
-          ? '/api/mcq/export/pdf/learner'
-          : '/api/mcq/export/pdf';
+      const response = await fetch(`/api/mcq/export/xlsx${queryParams}`);
 
-      const response = await fetch(`${endpoint}${queryParams}`);
       if (!response.ok) throw new Error('Export failed');
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mcq-${exportType}-${format(new Date(), 'yyyy-MM-dd')}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`;
+      a.download = `mcq-library-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -67,17 +62,68 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
 
       toast({
         title: "Success",
-        description: `MCQs exported to ${exportType.toUpperCase()} successfully`,
+        description: "MCQs exported to Excel successfully",
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Export failed",
-        description: error.message || "Failed to export MCQs",
+        description: "Failed to export MCQs to Excel",
       });
     } finally {
       setIsExporting(false);
       setPreviewModalOpen(false);
+    }
+  };
+
+  const handleExportPDF = async (type: 'full' | 'learner' = 'full') => {
+    setIsExporting(true);
+    try {
+      const queryParams = selectedMcqs.size > 0 ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
+      const endpoint = type === 'learner' ? '/api/mcq/export/pdf/learner' : '/api/mcq/export/pdf';
+      const filename = type === 'learner' ? 'mcq-practice' : 'mcq-library';
+
+      const response = await fetch(`${endpoint}${queryParams}`);
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: `MCQs exported to PDF successfully${type === 'learner' ? ' (Practice Version)' : ''}`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Failed to export MCQs to PDF",
+      });
+    } finally {
+      setIsExporting(false);
+      setPreviewModalOpen(false);
+    }
+  };
+
+  const handleExport = () => {
+    switch (exportType) {
+      case 'excel':
+        handleExportXLSX();
+        break;
+      case 'pdf':
+        handleExportPDF('full');
+        break;
+      case 'practice':
+        handleExportPDF('learner');
+        break;
     }
   };
 
