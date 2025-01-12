@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
 import XLSX from "xlsx";
 import PDFDocument from "pdfkit";
@@ -92,18 +92,7 @@ export function registerRoutes(app: Express): Server {
 
       const completion = await openai.chat.completions.create({
         model: "o1-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a medical education expert. Format your response exactly as specified in the prompt, using the exact headers provided."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }]
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -111,10 +100,8 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content generated");
       }
 
-      console.log("Generated content:", generatedContent);
-
       // Parse the generated content into structured sections
-      const sections = generatedContent.split(/\n\s*\n(?=[A-Z][A-Z\s]+:)/);
+      const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
       const parsedContent = {
         clinicalScenario: "",
         question: "",
@@ -129,15 +116,11 @@ export function registerRoutes(app: Express): Server {
         explanation: "",
       };
 
-      for (const section of sections) {
-        const [header, ...contentParts] = section.split(/:\s*/);
-        const sectionContent = contentParts.join(":").trim();
-        const headerKey = header.trim().toUpperCase();
+      sections.forEach(section => {
+        const [header, ...content] = section.split(":\n");
+        const sectionContent = content.join(":\n").trim();
 
-        console.log(`Processing section: ${headerKey}`);
-        console.log(`Content: ${sectionContent.substring(0, 100)}...`);
-
-        switch (headerKey) {
+        switch (header.trim()) {
           case "CLINICAL SCENARIO":
             parsedContent.clinicalScenario = sectionContent;
             break;
@@ -145,47 +128,22 @@ export function registerRoutes(app: Express): Server {
             parsedContent.question = sectionContent;
             break;
           case "OPTIONS":
-            const optionLines = sectionContent.split('\n');
-            for (const line of optionLines) {
-              const match = line.match(/^([A-E])[).]\s*(.+)$/);
-              if (match) {
-                const [, letter, text] = match;
-                parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
+            const options = sectionContent.split("\n");
+            options.forEach(option => {
+              const [letter, text] = option.split(") ");
+              if (letter && text) {
+                parsedContent.options[letter.trim() as keyof typeof parsedContent.options] = text.trim();
               }
-            }
+            });
             break;
           case "CORRECT ANSWER":
-            const answerMatch = sectionContent.match(/[A-E]/);
-            if (answerMatch) {
-              parsedContent.correctAnswer = answerMatch[0];
-            }
+            const answerMatch = sectionContent.match(/[A-E]$/);
+            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
             break;
         }
-      }
-
-      // Validate the parsed content
-      const missingFields = [];
-      if (!parsedContent.clinicalScenario) missingFields.push("Clinical Scenario");
-      if (!parsedContent.question) missingFields.push("Question");
-      if (!parsedContent.correctAnswer) missingFields.push("Correct Answer");
-      Object.entries(parsedContent.options).forEach(([letter, content]) => {
-        if (!content) missingFields.push(`Option ${letter}`);
-      });
-
-      if (missingFields.length > 0) {
-        console.error("Missing required fields:", missingFields);
-        console.error("Generated content:", generatedContent);
-        throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
-      }
-
-      console.log("Successfully parsed MCQ:", {
-        clinicalScenario: parsedContent.clinicalScenario.substring(0, 50) + "...",
-        question: parsedContent.question.substring(0, 50) + "...",
-        correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length,
       });
 
       res.json({
@@ -264,58 +222,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update MCQ rating
-  app.post("/api/mcq/:id/rate", async (req, res) => {
+  // Export to XLSX
+  app.get("/api/mcq/export/xlsx", async (_req, res) => {
     try {
-      const mcqId = parseInt(req.params.id);
-      const { rating } = req.body;
-
-      if (isNaN(mcqId)) {
-        return res.status(400).send("Invalid MCQ ID");
-      }
-
-      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-        return res.status(400).send("Rating must be a number between 1 and 5");
-      }
-
-      const [updatedMcq] = await db
-        .update(mcqs)
-        .set({ rating })
-        .where(eq(mcqs.id, mcqId))
-        .returning();
-
-      res.json(updatedMcq);
-    } catch (error: any) {
-      console.error('Update MCQ rating error:', error);
-      res.status(500).send(error.message || "Failed to update MCQ rating");
-    }
-  });
-
-
-  // Export to XLSX (with selection support)
-  app.get("/api/mcq/export/xlsx", async (req, res) => {
-    try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
-
-      if (selectedIds.length > 0) {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
-      }
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
 
       // Transform data for Excel
       const data = mcqHistory.map(mcq => ({
         Name: mcq.name,
         Topic: mcq.topic,
-        Rating: mcq.rating || 'Not rated',
         'Clinical Scenario': mcq.parsed_content.clinicalScenario,
         Question: mcq.parsed_content.question,
         'Option A': mcq.parsed_content.options.A,
@@ -347,24 +262,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF (with selection support)
-  app.get("/api/mcq/export/pdf", async (req, res) => {
+  // Export to PDF
+  app.get("/api/mcq/export/pdf", async (_req, res) => {
     try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
-
-      if (selectedIds.length > 0) {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
-      }
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
 
       // Create PDF document
       const doc = new PDFDocument();
@@ -385,9 +286,6 @@ export function registerRoutes(app: Express): Server {
         // Title and metadata with styling
         doc.font('Helvetica-Bold').fontSize(16).text(mcq.name);
         doc.font('Helvetica').fontSize(12).text(`Topic: ${mcq.topic}`);
-        if (mcq.rating) {
-          doc.text(`Rating: ${mcq.rating}/5`);
-        }
         doc.moveDown();
 
         // Clinical Scenario
@@ -437,6 +335,7 @@ export function registerRoutes(app: Express): Server {
           });
       });
 
+      // End the document
       doc.end();
     } catch (error: any) {
       console.error('Export PDF error:', error);
@@ -444,24 +343,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF for learners (without answers and with selection support)
-  app.get("/api/mcq/export/pdf/learner", async (req, res) => {
+  // Export to PDF for learners (without answers)
+  app.get("/api/mcq/export/pdf/learner", async (_req, res) => {
     try {
-      let mcqHistory;
-      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
-
-      if (selectedIds.length > 0) {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .where(inArray(mcqs.id, selectedIds))
-          .orderBy(desc(mcqs.created_at));
-      } else {
-        mcqHistory = await db
-          .select()
-          .from(mcqs)
-          .orderBy(desc(mcqs.created_at));
-      }
+      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
 
       // Create PDF document
       const doc = new PDFDocument();
@@ -523,6 +408,7 @@ export function registerRoutes(app: Express): Server {
           .moveDown(3);
       });
 
+      // End the document
       doc.end();
     } catch (error: any) {
       console.error('Export PDF error:', error);

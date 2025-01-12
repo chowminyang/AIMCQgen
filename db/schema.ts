@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { ParsedMCQ } from "@/types";
@@ -18,7 +18,6 @@ export const mcqs = pgTable("mcqs", {
   raw_content: text("raw_content").notNull(),
   parsed_content: jsonb("parsed_content").$type<ParsedMCQ>().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
-  rating: integer("rating"),
 });
 
 // Schema validations using zod
@@ -39,7 +38,6 @@ export const mcqSchema = z.object({
     correctAnswer: z.string(),
     explanation: z.string(),
   }),
-  rating: z.number().min(1).max(5).optional(),
 });
 
 export const insertUserSchema = createInsertSchema(users);
