@@ -27,6 +27,7 @@ export const mcqSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   raw_content: z.string().min(1, "Generated text is required"),
   parsed_content: z.object({
+    name: z.string(),
     clinicalScenario: z.string(),
     question: z.string(),
     options: z.object({
@@ -39,7 +40,7 @@ export const mcqSchema = z.object({
     correctAnswer: z.string(),
     explanation: z.string(),
   }),
-  rating: z.number().optional(),
+  rating: z.number().min(0).max(5).default(0),
 });
 
 export const insertUserSchema = createInsertSchema(users);

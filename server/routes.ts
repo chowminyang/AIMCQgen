@@ -119,9 +119,9 @@ function parseGeneratedContent(content: string) {
   }
 
   // Validate parsed content
-  const isValid = parsedContent.name && 
-                 parsedContent.clinicalScenario && 
-                 parsedContent.question && 
+  const isValid = parsedContent.name &&
+                 parsedContent.clinicalScenario &&
+                 parsedContent.question &&
                  Object.values(parsedContent.options).every(Boolean) &&
                  /^[A-E]$/.test(parsedContent.correctAnswer) &&
                  parsedContent.explanation;
@@ -161,10 +161,10 @@ export function registerRoutes(app: Express): Server {
       }
 
       const parsedContent = parseGeneratedContent(generatedContent);
-      console.log("Generated and parsed MCQ:", { 
+      console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
         correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length 
+        optionsCount: Object.keys(parsedContent.options).length
       });
 
       res.json({
@@ -203,7 +203,9 @@ export function registerRoutes(app: Express): Server {
   // Get MCQ history endpoint
   app.get("/api/mcq/history", async (_req, res) => {
     try {
+      console.log('Fetching MCQ history...');
       const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+      console.log('MCQ history fetched successfully:', mcqHistory.length, 'items');
       res.json(mcqHistory);
     } catch (error: any) {
       console.error('MCQ history error:', error);
@@ -239,7 +241,7 @@ export function registerRoutes(app: Express): Server {
 
       const [updatedMcq] = await db
         .update(mcqs)
-        .set({ 
+        .set({
           name,
           parsed_content: parsedContent,
         })
@@ -256,21 +258,26 @@ export function registerRoutes(app: Express): Server {
   // Rate MCQ endpoint
   app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
+      console.log('Rating MCQ...');
       const mcqId = parseInt(req.params.id);
       const { rating } = req.body;
 
       if (isNaN(mcqId)) {
+        console.error('Invalid MCQ ID:', req.params.id);
         return res.status(400).send("Invalid MCQ ID");
       }
 
       if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+        console.error('Invalid rating value:', rating);
         return res.status(400).send("Rating must be a number between 0 and 5");
       }
 
+      console.log(`Updating MCQ ${mcqId} with rating ${rating}`);
       await db.update(mcqs)
         .set({ rating })
         .where(eq(mcqs.id, mcqId));
 
+      console.log('Rating updated successfully');
       res.json({ success: true });
     } catch (error: any) {
       console.error('Update rating error:', error);
@@ -299,5 +306,6 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+  console.log('Routes registered successfully');
   return httpServer;
 }
