@@ -70,6 +70,38 @@ export default function Home() {
     },
   });
 
+  const rateMCQMutation = useMutation({
+    mutationFn: async ({ id, rating }: { id: number; rating: number }) => {
+      const response = await fetch(`/api/mcq/${id}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rating }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
+      toast({
+        title: "Success",
+        description: "MCQ rating has been updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update MCQ rating",
+      });
+    },
+  });
+
   const onGenerate = async (data: MCQFormData) => {
     setIsGenerating(true);
     try {
@@ -237,6 +269,7 @@ export default function Home() {
                 items={mcqHistory}
                 onEdit={handleEditMCQ}
                 onDelete={handleDeleteMCQ}
+                onRate={(id, rating) => rateMCQMutation.mutate({ id, rating })}
               />
             </CardContent>
           </Card>

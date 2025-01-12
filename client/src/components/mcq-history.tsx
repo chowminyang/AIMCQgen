@@ -1,5 +1,8 @@
 import { format } from "date-fns";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RatingSelector } from "@/components/rating-selector";
 import {
   Accordion,
   AccordionContent,
@@ -9,19 +12,20 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 import type { MCQHistoryItem } from "@/types";
 
 interface MCQHistoryProps {
   items: MCQHistoryItem[];
   onEdit: (mcq: MCQHistoryItem) => void;
   onDelete: (id: number) => void;
+  onRate: (id: number, rating: number) => void;
 }
 
-export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
+export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps) {
   const { toast } = useToast();
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [selectedMCQs, setSelectedMCQs] = useState<number[]>([]);
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -36,7 +40,8 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
 
   const handleExportXLSX = async () => {
     try {
-      const response = await fetch('/api/mcq/export/xlsx', {
+      const queryParams = selectedMCQs.length > 0 ? `?ids=${selectedMCQs.join(',')}` : '';
+      const response = await fetch(`/api/mcq/export/xlsx${queryParams}`, {
         method: 'GET',
       });
 
@@ -69,8 +74,9 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     try {
       const endpoint = type === 'learner' ? '/api/mcq/export/pdf/learner' : '/api/mcq/export/pdf';
       const filename = type === 'learner' ? 'mcq-practice' : 'mcq-library';
+      const queryParams = selectedMCQs.length > 0 ? `?ids=${selectedMCQs.join(',')}` : '';
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${endpoint}${queryParams}`, {
         method: 'GET',
       });
 
@@ -99,6 +105,18 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
     }
   };
 
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedMCQs(checked ? items.map(item => item.id) : []);
+  };
+
+  const toggleSelectMCQ = (mcqId: number) => {
+    setSelectedMCQs(prev => 
+      prev.includes(mcqId) 
+        ? prev.filter(id => id !== mcqId)
+        : [...prev, mcqId]
+    );
+  };
+
   if (items.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -109,44 +127,74 @@ export function MCQHistory({ items, onEdit, onDelete }: MCQHistoryProps) {
 
   return (
     <>
-      <div className="mb-4 flex justify-end gap-2">
-        <Button 
-          variant="outline" 
-          onClick={handleExportXLSX}
-          className="flex items-center gap-2"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Export to Excel
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => handleExportPDF('full')}
-          className="flex items-center gap-2"
-        >
-          <FileText className="h-4 w-4" />
-          Export to PDF
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => handleExportPDF('learner')}
-          className="flex items-center gap-2"
-        >
-          <GraduationCap className="h-4 w-4" />
-          Export Practice PDF
-        </Button>
+      <div className="mb-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedMCQs.length === items.length}
+              onCheckedChange={toggleSelectAll}
+            />
+            <label htmlFor="select-all" className="text-sm font-medium">
+              Select All ({selectedMCQs.length} selected)
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExportXLSX}
+              className="flex items-center gap-2"
+              disabled={selectedMCQs.length === 0}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Export to Excel
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleExportPDF('full')}
+              className="flex items-center gap-2"
+              disabled={selectedMCQs.length === 0}
+            >
+              <FileText className="h-4 w-4" />
+              Export to PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleExportPDF('learner')}
+              className="flex items-center gap-2"
+              disabled={selectedMCQs.length === 0}
+            >
+              <GraduationCap className="h-4 w-4" />
+              Export Practice PDF
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Accordion type="single" collapsible className="w-full">
         {items.map((item) => (
           <AccordionItem key={item.id} value={item.id.toString()}>
             <AccordionTrigger className="flex items-center gap-4">
-              <div className="flex-1 text-left">
-                <div className="font-medium">{item.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  Topic: {item.topic} • {format(new Date(item.created_at), "PPpp")}
+              <div className="flex items-center gap-4 flex-1">
+                <Checkbox
+                  checked={selectedMCQs.includes(item.id)}
+                  onCheckedChange={() => toggleSelectMCQ(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Topic: {item.topic} • {format(new Date(item.created_at), "PPpp")}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <div onClick={(e) => e.stopPropagation()}>
+                  <RatingSelector
+                    value={item.rating}
+                    onChange={(rating) => onRate(item.id, rating)}
+                  />
+                </div>
                 <Button
                   variant="outline"
                   size="icon"

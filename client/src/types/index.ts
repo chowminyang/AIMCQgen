@@ -29,4 +29,5 @@ export interface MCQHistoryItem {
   raw_content: string;
   parsed_content: ParsedMCQ;
   created_at: string;
+  rating?: number;
 }

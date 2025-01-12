@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import OpenAI from "openai";
 import XLSX from "xlsx";
 import PDFDocument from "pdfkit";
@@ -222,15 +222,58 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to XLSX
-  app.get("/api/mcq/export/xlsx", async (_req, res) => {
+  // Update MCQ rating
+  app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
-      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+      const mcqId = parseInt(req.params.id);
+      const { rating } = req.body;
+
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
+      }
+
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).send("Rating must be a number between 1 and 5");
+      }
+
+      const [updatedMcq] = await db
+        .update(mcqs)
+        .set({ rating })
+        .where(eq(mcqs.id, mcqId))
+        .returning();
+
+      res.json(updatedMcq);
+    } catch (error: any) {
+      console.error('Update MCQ rating error:', error);
+      res.status(500).send(error.message || "Failed to update MCQ rating");
+    }
+  });
+
+
+  // Export to XLSX (with selection support)
+  app.get("/api/mcq/export/xlsx", async (req, res) => {
+    try {
+      let mcqHistory;
+      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
+
+      if (selectedIds.length > 0) {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .where(inArray(mcqs.id, selectedIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
 
       // Transform data for Excel
       const data = mcqHistory.map(mcq => ({
         Name: mcq.name,
         Topic: mcq.topic,
+        Rating: mcq.rating || 'Not rated',
         'Clinical Scenario': mcq.parsed_content.clinicalScenario,
         Question: mcq.parsed_content.question,
         'Option A': mcq.parsed_content.options.A,
@@ -262,10 +305,24 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF
-  app.get("/api/mcq/export/pdf", async (_req, res) => {
+  // Export to PDF (with selection support)
+  app.get("/api/mcq/export/pdf", async (req, res) => {
     try {
-      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+      let mcqHistory;
+      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
+
+      if (selectedIds.length > 0) {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .where(inArray(mcqs.id, selectedIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
 
       // Create PDF document
       const doc = new PDFDocument();
@@ -286,6 +343,9 @@ export function registerRoutes(app: Express): Server {
         // Title and metadata with styling
         doc.font('Helvetica-Bold').fontSize(16).text(mcq.name);
         doc.font('Helvetica').fontSize(12).text(`Topic: ${mcq.topic}`);
+        if (mcq.rating) {
+          doc.text(`Rating: ${mcq.rating}/5`);
+        }
         doc.moveDown();
 
         // Clinical Scenario
@@ -335,7 +395,6 @@ export function registerRoutes(app: Express): Server {
           });
       });
 
-      // End the document
       doc.end();
     } catch (error: any) {
       console.error('Export PDF error:', error);
@@ -343,10 +402,24 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF for learners (without answers)
-  app.get("/api/mcq/export/pdf/learner", async (_req, res) => {
+  // Export to PDF for learners (without answers and with selection support)
+  app.get("/api/mcq/export/pdf/learner", async (req, res) => {
     try {
-      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
+      let mcqHistory;
+      const selectedIds = req.query.ids ? (req.query.ids as string).split(',').map(Number) : [];
+
+      if (selectedIds.length > 0) {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .where(inArray(mcqs.id, selectedIds))
+          .orderBy(desc(mcqs.created_at));
+      } else {
+        mcqHistory = await db
+          .select()
+          .from(mcqs)
+          .orderBy(desc(mcqs.created_at));
+      }
 
       // Create PDF document
       const doc = new PDFDocument();
@@ -408,7 +481,6 @@ export function registerRoutes(app: Express): Server {
           .moveDown(3);
       });
 
-      // End the document
       doc.end();
     } catch (error: any) {
       console.error('Export PDF error:', error);
