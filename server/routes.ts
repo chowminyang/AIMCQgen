@@ -130,14 +130,14 @@ export function registerRoutes(app: Express): Server {
           case "OPTIONS":
             const options = sectionContent.split("\n");
             options.forEach(option => {
-              const [letter, text] = option.split(") ");
+              const [letter, text] = option.split(/[).]/).map(s => s.trim());
               if (letter && text) {
-                parsedContent.options[letter.trim() as keyof typeof parsedContent.options] = text.trim();
+                parsedContent.options[letter as keyof typeof parsedContent.options] = text;
               }
             });
             break;
           case "CORRECT ANSWER":
-            const answerMatch = sectionContent.match(/[A-E]$/);
+            const answerMatch = sectionContent.match(/[A-E]/);
             parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
             break;
           case "EXPLANATION":
