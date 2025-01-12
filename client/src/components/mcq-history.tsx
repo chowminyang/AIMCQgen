@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { MCQHistoryItem } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PreviewModal } from "./preview-modal";
 
 interface MCQHistoryProps {
   items: MCQHistoryItem[];
@@ -25,6 +26,9 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [selectedMcqs, setSelectedMcqs] = useState<Set<number>>(new Set());
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [exportType, setExportType] = useState<'excel' | 'pdf' | 'practice'>('excel');
+  const [isExporting, setIsExporting] = useState(false);
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -37,12 +41,11 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
     });
   };
 
-  const handleExportXLSX = async (selectedOnly: boolean = false) => {
+  const handleExportXLSX = async () => {
+    setIsExporting(true);
     try {
-      const queryParams = selectedOnly ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
-      const response = await fetch(`/api/mcq/export/xlsx${queryParams}`, {
-        method: 'GET',
-      });
+      const queryParams = selectedMcqs.size > 0 ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
+      const response = await fetch(`/api/mcq/export/xlsx${queryParams}`);
 
       if (!response.ok) throw new Error('Export failed');
 
@@ -60,24 +63,26 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
         title: "Success",
         description: "MCQs exported to Excel successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Export failed",
         description: "Failed to export MCQs to Excel",
       });
+    } finally {
+      setIsExporting(false);
+      setPreviewModalOpen(false);
     }
   };
 
-  const handleExportPDF = async (type: 'full' | 'learner' = 'full', selectedOnly: boolean = false) => {
+  const handleExportPDF = async (type: 'full' | 'learner' = 'full') => {
+    setIsExporting(true);
     try {
-      const queryParams = selectedOnly ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
+      const queryParams = selectedMcqs.size > 0 ? `?ids=${Array.from(selectedMcqs).join(',')}` : '';
       const endpoint = type === 'learner' ? '/api/mcq/export/pdf/learner' : '/api/mcq/export/pdf';
       const filename = type === 'learner' ? 'mcq-practice' : 'mcq-library';
 
-      const response = await fetch(`${endpoint}${queryParams}`, {
-        method: 'GET',
-      });
+      const response = await fetch(`${endpoint}${queryParams}`);
 
       if (!response.ok) throw new Error('Export failed');
 
@@ -95,12 +100,29 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
         title: "Success",
         description: `MCQs exported to PDF successfully${type === 'learner' ? ' (Practice Version)' : ''}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Export failed",
         description: "Failed to export MCQs to PDF",
       });
+    } finally {
+      setIsExporting(false);
+      setPreviewModalOpen(false);
+    }
+  };
+
+  const handleExport = () => {
+    switch (exportType) {
+      case 'excel':
+        handleExportXLSX();
+        break;
+      case 'pdf':
+        handleExportPDF('full');
+        break;
+      case 'practice':
+        handleExportPDF('learner');
+        break;
     }
   };
 
@@ -112,6 +134,11 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
       newSelection.add(id);
     }
     setSelectedMcqs(newSelection);
+  };
+
+  const getSelectedMcqs = () => {
+    if (selectedMcqs.size === 0) return items;
+    return items.filter(item => selectedMcqs.has(item.id));
   };
 
   const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: number, rating: number) => void; itemId: number }) => {
@@ -156,7 +183,10 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
         <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
-            onClick={() => handleExportXLSX(hasSelection)}
+            onClick={() => {
+              setExportType('excel');
+              setPreviewModalOpen(true);
+            }}
             className="flex items-center gap-2"
           >
             <FileSpreadsheet className="h-4 w-4" />
@@ -164,7 +194,10 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => handleExportPDF('full', hasSelection)}
+            onClick={() => {
+              setExportType('pdf');
+              setPreviewModalOpen(true);
+            }}
             className="flex items-center gap-2"
           >
             <FileText className="h-4 w-4" />
@@ -172,7 +205,10 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => handleExportPDF('learner', hasSelection)}
+            onClick={() => {
+              setExportType('practice');
+              setPreviewModalOpen(true);
+            }}
             className="flex items-center gap-2"
           >
             <GraduationCap className="h-4 w-4" />
@@ -277,6 +313,15 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
           </AccordionItem>
         ))}
       </Accordion>
+
+      <PreviewModal
+        open={previewModalOpen}
+        onOpenChange={setPreviewModalOpen}
+        mcqs={getSelectedMcqs()}
+        exportType={exportType}
+        onExport={handleExport}
+        isLoading={isExporting}
+      />
 
       <AlertDialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>
