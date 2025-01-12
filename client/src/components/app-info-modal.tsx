@@ -22,7 +22,7 @@ export function AppInfoModal() {
         <DialogHeader>
           <DialogTitle>Application Structure</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh]">
+        <ScrollArea className="max-h-[70vh] relative">
           <div className="space-y-6 pr-6">
             {/* Frontend Section */}
             <div>
