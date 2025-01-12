@@ -226,7 +226,7 @@ export default function Home() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mt-8">
                   This app leverages OpenAI's o1-mini reasoning model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
