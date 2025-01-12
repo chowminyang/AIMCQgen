@@ -23,6 +23,7 @@ import { Loader2, Save } from "lucide-react";
 import type { ParsedMCQ } from "@/types";
 
 const mcqFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   clinicalScenario: z.string().min(1, "Clinical scenario is required"),
   question: z.string().min(1, "Question is required"),
   options: z.object({
@@ -38,16 +39,19 @@ const mcqFormSchema = z.object({
   explanation: z.string().min(1, "Explanation is required"),
 });
 
+type MCQFormData = z.infer<typeof mcqFormSchema>;
+
 type Props = {
-  mcq: ParsedMCQ;
-  onSave: (data: ParsedMCQ) => void;
+  mcq: ParsedMCQ & { name: string };
+  onSave: (data: MCQFormData) => void;
   isLoading?: boolean;
 };
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
-  const form = useForm<ParsedMCQ>({
+  const form = useForm<MCQFormData>({
     resolver: zodResolver(mcqFormSchema),
     defaultValues: {
+      name: mcq.name,
       ...mcq,
       correctAnswer: mcq.correctAnswer.trim(),
     },
@@ -56,6 +60,20 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>MCQ Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter name..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="clinicalScenario"

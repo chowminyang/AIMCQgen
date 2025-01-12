@@ -84,10 +84,51 @@ export default function Home() {
     }
   };
 
-  const handleSaveEdits = async (editedMCQ: ParsedMCQ) => {
-    console.log('Saving edits:', editedMCQ);
-    setEditedMCQ(editedMCQ);
-    setShowSaveDialog(true);
+  const handleSaveEdits = async (editedMCQ: ParsedMCQ & { name: string }) => {
+    if (editingMCQ) {
+      try {
+        const response = await fetch(`/api/mcq/${editingMCQ.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: editedMCQ.name,
+            parsedContent: {
+              clinicalScenario: editedMCQ.clinicalScenario,
+              question: editedMCQ.question,
+              options: editedMCQ.options,
+              correctAnswer: editedMCQ.correctAnswer,
+              explanation: editedMCQ.explanation,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
+        toast({
+          title: "Success",
+          description: "MCQ has been updated",
+        });
+
+        setShowEditor(false);
+        setEditingMCQ(null);
+        setParsedMCQ(null);
+        setGeneratedMCQ(null);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to update MCQ",
+        });
+      }
+    } else {
+      setEditedMCQ(editedMCQ);
+      setShowSaveDialog(true);
+    }
   };
 
   const handleSaveMCQ = async (name: string) => {
@@ -128,7 +169,10 @@ export default function Home() {
   const handleEditMCQ = (mcq: MCQHistoryItem) => {
     setEditingMCQ(mcq);
     setGeneratedMCQ(mcq.raw_content);
-    setParsedMCQ(mcq.parsed_content);
+    setParsedMCQ({
+      ...mcq.parsed_content,
+      name: mcq.name,
+    });
     setCurrentMCQTopic(mcq.topic);
     setShowEditor(true);
   };
@@ -182,7 +226,6 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto py-8 px-4">
         <div className="space-y-8">
-          {/* Generation Form */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
@@ -192,7 +235,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Loading State */}
           {isGenerating && (
             <Card className="w-full max-w-4xl mx-auto">
               <CardHeader>
@@ -204,7 +246,6 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Edit MCQ Form */}
           {!isGenerating && showEditor && parsedMCQ && (
             <div className="w-full max-w-4xl mx-auto">
               <Card>
@@ -215,7 +256,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <MCQEditForm
-                    mcq={parsedMCQ}
+                    mcq={{
+                      ...parsedMCQ,
+                      name: editingMCQ?.name || '',
+                    }}
                     onSave={handleSaveEdits}
                     isLoading={isSaving}
                   />
@@ -237,7 +281,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* MCQ Library */}
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle>MCQ Library</CardTitle>
@@ -252,7 +295,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Prompt Editor */}
           <div className="w-full max-w-4xl mx-auto">
             <PromptEditor
               currentPrompt={promptData?.prompt || ''}
