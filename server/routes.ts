@@ -2,63 +2,70 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import OpenAI from "openai";
+import XLSX from "xlsx";
+import PDFDocument from "pdfkit";
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+13:
+14:Please follow these steps to create the question:
+15:
+16:1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
+17:
+18:2. Clinical Scenario:
+19:   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
+20:   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+21:   - Use ONLY standard international units with reference ranges for any test results.
+22:   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+23:
+24:3. Question:
+25:   - Test second-order thinking skills about {topic}.
+26:   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+27:   - Do not reveal or hint at the diagnosis in the question.
+28:   - Avoid including obvious investigations or management options that would immediately give away the answer.
+29:
+30:4. Multiple Choice Options:
+31:   - Provide 5 options (A-E) in alphabetical order:
+32:     a) One best and correct answer
+33:     b) One correct answer, but not the best option
+34:     c-e) Plausible options that might be correct, but are not the best answer
+35:   - Keep the length of all options consistent.
+36:   - Avoid misleading or ambiguously worded distractors.
+37:
+38:5. Correct Answer and Feedback:
+39:   - Identify the correct answer and explain why it is the best option.
+40:   - Provide option-specific explanations for why each option is correct or incorrect.
+41:
+42:Return your response in this EXACT format with these EXACT section headers:
+43:
+44:NAME:
+45:[MCQ name]
+46:
+47:CLINICAL SCENARIO:
+48:[Clinical scenario text]
+49:
+50:QUESTION:
+51:[Question text]
+52:
+53:OPTIONS:
+54:A) [Option A text]
+55:B) [Option B text]
+56:C) [Option C text]
+57:D) [Option D text]
+58:E) [Option E text]
+59:
+60:CORRECT ANSWER: [Single letter A-E]
+61:
+62:EXPLANATION:
+63:[Detailed explanation text]`;
 
-Please follow these steps to create the question:
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is required");
+}
 
-1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
-
-2. Clinical Scenario:
-   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
-   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
-   - Use ONLY standard international units with reference ranges for any test results.
-   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
-
-3. Question:
-   - Test second-order thinking skills about {topic}.
-   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-   - Do not reveal or hint at the diagnosis in the question.
-   - Avoid including obvious investigations or management options that would immediately give away the answer.
-
-4. Multiple Choice Options:
-   - Provide 5 options (A-E) in alphabetical order:
-     a) One best and correct answer
-     b) One correct answer, but not the best option
-     c-e) Plausible options that might be correct, but are not the best answer
-   - Keep the length of all options consistent.
-   - Avoid misleading or ambiguously worded distractors.
-
-5. Correct Answer and Feedback:
-   - Identify the correct answer and explain why it is the best option.
-   - Provide option-specific explanations for why each option is correct or incorrect.
-
-Return your response in this EXACT format with these EXACT section headers:
-
-NAME:
-[MCQ name]
-
-CLINICAL SCENARIO:
-[Clinical scenario text]
-
-QUESTION:
-[Question text]
-
-OPTIONS:
-A) [Option A text]
-B) [Option B text]
-C) [Option C text]
-D) [Option D text]
-E) [Option E text]
-
-CORRECT ANSWER: [Single letter A-E]
-
-EXPLANATION:
-[Detailed explanation text]`;
-
+// Use the completion API
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -93,9 +100,13 @@ export function registerRoutes(app: Express): Server {
         .replace(/\{topic\}/g, topic)
         .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
+      console.log('Sending request to OpenAI with topic:', topic);
+
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }]
+        model: "gpt-4-turbo-preview",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 2000,
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -103,8 +114,12 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content generated");
       }
 
+      console.log('Received response from OpenAI:', generatedContent);
+
       // Parse the generated content into structured sections
-      const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
+      const sections = generatedContent.split(/\n\n(?=[A-Z]+:)/);
+
+      // Initialize parsed content with default values
       const parsedContent = {
         name: "",
         clinicalScenario: "",
@@ -120,7 +135,8 @@ export function registerRoutes(app: Express): Server {
         explanation: "",
       };
 
-      sections.forEach(section => {
+      // Process each section
+      for (const section of sections) {
         const [header, ...content] = section.split(":\n");
         const sectionContent = content.join(":\n").trim();
 
@@ -135,23 +151,25 @@ export function registerRoutes(app: Express): Server {
             parsedContent.question = sectionContent;
             break;
           case "OPTIONS":
-            const options = sectionContent.split("\n");
-            options.forEach(option => {
-              const [letter, text] = option.split(") ");
-              if (letter && text) {
-                parsedContent.options[letter.trim() as keyof typeof parsedContent.options] = text.trim();
+            const optionsLines = sectionContent.split("\n");
+            optionsLines.forEach(line => {
+              const match = line.match(/^([A-E])\)\s*(.+)$/);
+              if (match) {
+                const [, letter, text] = match;
+                parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
               }
             });
             break;
           case "CORRECT ANSWER":
-            const answerMatch = sectionContent.match(/[A-E]$/);
-            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+            parsedContent.correctAnswer = sectionContent.match(/[A-E]$/)?.[0] || "";
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
             break;
         }
-      });
+      }
+
+      console.log('Parsed content:', parsedContent);
 
       res.json({
         raw: generatedContent,
@@ -166,11 +184,10 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { topic, rawContent, parsedContent } = req.body;
+      const { name, topic, rawContent, parsedContent } = req.body;
 
-      // Since name is part of parsedContent now, use that instead
       const [newMcq] = await db.insert(mcqs).values({
-        name: parsedContent.name,
+        name,
         topic,
         raw_content: rawContent,
         parsed_content: parsedContent,
@@ -230,7 +247,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update MCQ rating
+  // Update MCQ endpoint
+  app.put("/api/mcq/:id", async (req, res) => {
+    try {
+      const mcqId = parseInt(req.params.id);
+      const { name, parsedContent } = req.body;
+
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
+      }
+
+      const [updatedMcq] = await db
+        .update(mcqs)
+        .set({
+          name: name || parsedContent.name,
+          parsed_content: parsedContent,
+        })
+        .where(eq(mcqs.id, mcqId))
+        .returning();
+
+      res.json(updatedMcq);
+    } catch (error: any) {
+      console.error('Update MCQ error:', error);
+      res.status(500).send(error.message || "Failed to update MCQ");
+    }
+  });
+
+  // Update MCQ rating endpoint
   app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
@@ -244,41 +287,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Rating must be a number between 0 and 5");
       }
 
-      await db.update(mcqs)
-        .set({ rating })
-        .where(eq(mcqs.id, mcqId));
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error('Update rating error:', error);
-      res.status(500).send(error.message || "Failed to update rating");
-    }
-  });
-
-
-  // Update MCQ endpoint
-  app.put("/api/mcq/:id", async (req, res) => {
-    try {
-      const mcqId = parseInt(req.params.id);
-      const { name, parsedContent } = req.body;
-
-      if (isNaN(mcqId)) {
-        return res.status(400).send("Invalid MCQ ID");
-      }
-
       const [updatedMcq] = await db
         .update(mcqs)
-        .set({ 
-          name,
-          parsed_content: parsedContent,
-        })
+        .set({ rating })
         .where(eq(mcqs.id, mcqId))
         .returning();
 
       res.json(updatedMcq);
     } catch (error: any) {
-      console.error('Update MCQ error:', error);
-      res.status(500).send(error.message || "Failed to update MCQ");
+      console.error('Update rating error:', error);
+      res.status(500).send(error.message || "Failed to update rating");
     }
   });
 
