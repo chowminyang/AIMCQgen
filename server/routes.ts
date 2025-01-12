@@ -13,7 +13,7 @@ let currentPrompt = `You are an expert medical educator tasked with creating an 
 Please follow these steps to create the question:
 
 1. Clinical Scenario:
-   - Write a clinical scenario in the present tense (maximum 120 words).
+   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
    - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
    - Use ONLY standard international units with reference ranges for any test results.
    - Do not reveal the diagnosis or include investigations that immediately give away the answer.
