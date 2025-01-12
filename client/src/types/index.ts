@@ -9,6 +9,7 @@ export interface MCQResponse {
 }
 
 export interface ParsedMCQ {
+  name: string;
   clinicalScenario: string;
   question: string;
   options: {

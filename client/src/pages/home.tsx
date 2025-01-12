@@ -7,7 +7,6 @@ import { MCQLoadingState } from "@/components/mcq-loading-state";
 import { MCQEditForm } from "@/components/mcq-edit-form";
 import { MCQHistory } from "@/components/mcq-history";
 import { MCQForm } from "@/components/mcq-form";
-import { SaveMCQDialog } from "@/components/save-mcq-dialog";
 import { PasswordOverlay } from "@/components/password-overlay";
 import { generateMCQ, getMCQHistory, saveMCQ, deleteMCQ } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
@@ -19,10 +18,8 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [generatedMCQ, setGeneratedMCQ] = useState<string | null>(null);
   const [parsedMCQ, setParsedMCQ] = useState<ParsedMCQ | null>(null);
-  const [editedMCQ, setEditedMCQ] = useState<ParsedMCQ | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingMCQ, setEditingMCQ] = useState<MCQHistoryItem | null>(null);
@@ -126,43 +123,41 @@ export default function Home() {
         });
       }
     } else {
-      setEditedMCQ(editedMCQ);
-      setShowSaveDialog(true);
-    }
-  };
+      // Direct save without dialog
+      setIsSaving(true);
+      try {
+        await saveMCQ({
+          name: editedMCQ.name,
+          topic: currentMCQTopic,
+          rawContent: generatedMCQ || '',
+          parsedContent: {
+            clinicalScenario: editedMCQ.clinicalScenario,
+            question: editedMCQ.question,
+            options: editedMCQ.options,
+            correctAnswer: editedMCQ.correctAnswer,
+            explanation: editedMCQ.explanation,
+          },
+        });
 
-  const handleSaveMCQ = async (name: string) => {
-    if (!editedMCQ) return;
+        toast({
+          title: "Success",
+          description: "MCQ has been saved to library",
+        });
 
-    setIsSaving(true);
-    try {
-      await saveMCQ({
-        name,
-        topic: currentMCQTopic,
-        rawContent: generatedMCQ || '',
-        parsedContent: editedMCQ,
-      });
-
-      toast({
-        title: "Success",
-        description: "MCQ has been saved to library",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
-      setShowSaveDialog(false);
-      setShowEditor(false);
-      setEditingMCQ(null);
-      setEditedMCQ(null);
-      setParsedMCQ(null);
-      setGeneratedMCQ(null);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to save MCQ",
-      });
-    } finally {
-      setIsSaving(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/mcq/history'] });
+        setShowEditor(false);
+        setEditingMCQ(null);
+        setParsedMCQ(null);
+        setGeneratedMCQ(null);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to save MCQ",
+        });
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -270,7 +265,6 @@ export default function Home() {
                       setEditingMCQ(null);
                       setGeneratedMCQ(null);
                       setParsedMCQ(null);
-                      setEditedMCQ(null);
                     }}
                     className="mt-4"
                   >
@@ -303,13 +297,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      <SaveMCQDialog
-        open={showSaveDialog}
-        onOpenChange={setShowSaveDialog}
-        onSave={handleSaveMCQ}
-        isLoading={isSaving}
-      />
     </div>
   );
 }

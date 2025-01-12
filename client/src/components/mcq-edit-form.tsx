@@ -39,19 +39,16 @@ const mcqFormSchema = z.object({
   explanation: z.string().min(1, "Explanation is required"),
 });
 
-type MCQFormData = z.infer<typeof mcqFormSchema>;
-
 type Props = {
-  mcq: ParsedMCQ & { name: string };
-  onSave: (data: MCQFormData) => void;
+  mcq: ParsedMCQ;
+  onSave: (data: ParsedMCQ) => void;
   isLoading?: boolean;
 };
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
-  const form = useForm<MCQFormData>({
+  const form = useForm<ParsedMCQ>({
     resolver: zodResolver(mcqFormSchema),
     defaultValues: {
-      name: mcq.name,
       ...mcq,
       correctAnswer: mcq.correctAnswer.trim(),
     },
@@ -67,7 +64,7 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
             <FormItem>
               <FormLabel>MCQ Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter name..." {...field} />
+                <Input placeholder="Enter MCQ name..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -2,29 +2,29 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import XLSX from "xlsx";
-import PDFDocument from "pdfkit";
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
 Please follow these steps to create the question:
 
-1. Clinical Scenario:
+1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
+
+2. Clinical Scenario:
    - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
    - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
    - Use ONLY standard international units with reference ranges for any test results.
    - Do not reveal the diagnosis or include investigations that immediately give away the answer.
 
-2. Question:
+3. Question:
    - Test second-order thinking skills about {topic}.
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
    - Do not reveal or hint at the diagnosis in the question.
    - Avoid including obvious investigations or management options that would immediately give away the answer.
 
-3. Multiple Choice Options:
+4. Multiple Choice Options:
    - Provide 5 options (A-E) in alphabetical order:
      a) One best and correct answer
      b) One correct answer, but not the best option
@@ -32,11 +32,14 @@ Please follow these steps to create the question:
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
 
-4. Correct Answer and Feedback:
+5. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
 
 Return your response in this EXACT format with these EXACT section headers:
+
+NAME:
+[MCQ name]
 
 CLINICAL SCENARIO:
 [Clinical scenario text]
@@ -91,7 +94,7 @@ export function registerRoutes(app: Express): Server {
         .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
-        model: "o1-mini",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }]
       });
 
@@ -103,6 +106,7 @@ export function registerRoutes(app: Express): Server {
       // Parse the generated content into structured sections
       const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
       const parsedContent = {
+        name: "",
         clinicalScenario: "",
         question: "",
         options: {
@@ -121,6 +125,9 @@ export function registerRoutes(app: Express): Server {
         const sectionContent = content.join(":\n").trim();
 
         switch (header.trim()) {
+          case "NAME":
+            parsedContent.name = sectionContent;
+            break;
           case "CLINICAL SCENARIO":
             parsedContent.clinicalScenario = sectionContent;
             break;
@@ -159,10 +166,11 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { name, topic, rawContent, parsedContent } = req.body;
+      const { topic, rawContent, parsedContent } = req.body;
 
+      // Since name is part of parsedContent now, use that instead
       const [newMcq] = await db.insert(mcqs).values({
-        name,
+        name: parsedContent.name,
         topic,
         raw_content: rawContent,
         parsed_content: parsedContent,
