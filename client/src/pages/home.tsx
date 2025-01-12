@@ -12,6 +12,7 @@ import { generateMCQ, getMCQHistory, saveMCQ, deleteMCQ } from "@/lib/api";
 import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PromptEditor } from "@/components/prompt-editor";
+import { AppInfoModal } from "@/components/app-info-modal";
 
 export default function Home() {
   const { toast } = useToast();
@@ -222,14 +223,17 @@ export default function Home() {
       <main className="container mx-auto py-8 px-4">
         <div className="space-y-8">
           <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                This app leverages OpenAI's o1-mini reasoning model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                This application is experimental and copyrighted to <em className="font-bold">Chow Minyang, 2025</em>.
-              </p>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  This app leverages OpenAI's o1-mini reasoning model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  This application is experimental and copyrighted to <em className="font-bold">Chow Minyang, 2025</em>.
+                </p>
+              </div>
+              <AppInfoModal />
             </CardHeader>
             <CardContent>
               <MCQForm onSubmit={onGenerate} isLoading={isGenerating} />
