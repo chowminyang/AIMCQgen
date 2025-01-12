@@ -2,44 +2,62 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { mcqs } from "@db/schema";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import * as XLSX from 'xlsx';
-const PDFDocument = require('pdfkit');
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+
 Please follow these steps to create the question:
 
-1. NAME:
-[Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology")]
+1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
 
-2. CLINICAL SCENARIO:
-[Write a clinical scenario about {topic} in the present tense (maximum 120 words)]
-[Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations]
-[Use ONLY standard international units with reference ranges for any test results]
-[Do not reveal the diagnosis or include investigations that immediately give away the answer]
+2. Clinical Scenario:
+   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
+   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+   - Use ONLY standard international units with reference ranges for any test results.
+   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
 
-3. QUESTION:
-[Test second-order thinking skills about {topic}]
-[For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans]
-[Do not reveal or hint at the diagnosis in the question]
-[Avoid including obvious investigations or management options that would immediately give away the answer]
+3. Question:
+   - Test second-order thinking skills about {topic}.
+   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+   - Do not reveal or hint at the diagnosis in the question.
+   - Avoid including obvious investigations or management options that would immediately give away the answer.
 
-4. OPTIONS:
-A) [One best and correct answer]
-B) [One correct answer, but not the best option]
-C) [Plausible option that might be correct, but not the best answer]
-D) [Plausible option that might be correct, but not the best answer]
-E) [Plausible option that might be correct, but not the best answer]
-[Keep the length of all options consistent]
-[Avoid misleading or ambiguously worded distractors]
+4. Multiple Choice Options:
+   - Provide 5 options (A-E) in alphabetical order:
+     a) One best and correct answer
+     b) One correct answer, but not the best option
+     c-e) Plausible options that might be correct, but are not the best answer
+   - Keep the length of all options consistent.
+   - Avoid misleading or ambiguously worded distractors.
 
-5. CORRECT ANSWER: [Single letter A-E]
+5. Correct Answer and Feedback:
+   - Identify the correct answer and explain why it is the best option.
+   - Provide option-specific explanations for why each option is correct or incorrect.
 
-6. EXPLANATION:
-[Identify why the correct answer is the best option]
-[Provide option-specific explanations for why each option is correct or incorrect]`;
+Return your response in this EXACT format with these EXACT section headers:
+
+NAME:
+[MCQ name]
+
+CLINICAL SCENARIO:
+[Clinical scenario text]
+
+QUESTION:
+[Question text]
+
+OPTIONS:
+A) [Option A text]
+B) [Option B text]
+C) [Option C text]
+D) [Option D text]
+E) [Option E text]
+
+CORRECT ANSWER: [Single letter A-E]
+
+EXPLANATION:
+[Detailed explanation text]`;
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -64,7 +82,7 @@ export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
-      const { topic, referenceText, contributor } = req.body;
+      const { topic, referenceText } = req.body;
 
       if (!topic) {
         return res.status(400).send("Topic is required");
@@ -72,14 +90,12 @@ export function registerRoutes(app: Express): Server {
 
       // Replace the topic placeholder in the prompt
       const prompt = currentPrompt
-        .replace(/\{topic\}/g, topic);
+        .replace(/\{topic\}/g, topic)
+        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        messages: [{ 
-          role: "user", 
-          content: prompt + (referenceText ? `\n\nUse this reference text in your explanations where relevant: ${referenceText}` : '')
-        }]
+        messages: [{ role: "user", content: prompt }]
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -87,7 +103,7 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No content generated");
       }
 
-      // Parse the generated content
+      // Parse the generated content into structured sections
       const sections = generatedContent.split(/\n\n(?=[A-Z ]+:)/);
       const parsedContent = {
         name: "",
@@ -128,7 +144,8 @@ export function registerRoutes(app: Express): Server {
             });
             break;
           case "CORRECT ANSWER":
-            parsedContent.correctAnswer = sectionContent.trim();
+            const answerMatch = sectionContent.match(/[A-E]$/);
+            parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
             break;
           case "EXPLANATION":
             parsedContent.explanation = sectionContent;
@@ -149,14 +166,14 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { name, topic, rawContent, parsedContent, contributor } = req.body;
+      const { topic, rawContent, parsedContent } = req.body;
 
+      // Since name is part of parsedContent now, use that instead
       const [newMcq] = await db.insert(mcqs).values({
-        name: parsedContent.name || name,
+        name: parsedContent.name,
         topic,
         raw_content: rawContent,
         parsed_content: parsedContent,
-        contributor: contributor || null,
       }).returning();
 
       res.json(newMcq);
@@ -193,33 +210,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update MCQ endpoint
-  app.put("/api/mcq/:id", async (req, res) => {
+  // Get single MCQ endpoint
+  app.get("/api/mcq/:id", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
-      const { name, parsedContent } = req.body;
-
       if (isNaN(mcqId)) {
         return res.status(400).send("Invalid MCQ ID");
       }
 
-      const [updatedMcq] = await db
-        .update(mcqs)
-        .set({ 
-          name: name || parsedContent.name,
-          parsed_content: parsedContent,
-        })
-        .where(eq(mcqs.id, mcqId))
-        .returning();
+      const [mcq] = await db.select().from(mcqs).where(eq(mcqs.id, mcqId));
+      if (!mcq) {
+        return res.status(404).send("MCQ not found");
+      }
 
-      res.json(updatedMcq);
+      res.json(mcq);
     } catch (error: any) {
-      console.error('Update MCQ error:', error);
-      res.status(500).send(error.message || "Failed to update MCQ");
+      console.error('Get MCQ error:', error);
+      res.status(500).send(error.message || "Failed to fetch MCQ");
     }
   });
 
-  // Rate MCQ endpoint
+  // Update MCQ rating
   app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
       const mcqId = parseInt(req.params.id);
@@ -244,7 +255,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to XLSX endpoint
+
+  // Update MCQ endpoint
+  app.put("/api/mcq/:id", async (req, res) => {
+    try {
+      const mcqId = parseInt(req.params.id);
+      const { name, parsedContent } = req.body;
+
+      if (isNaN(mcqId)) {
+        return res.status(400).send("Invalid MCQ ID");
+      }
+
+      const [updatedMcq] = await db
+        .update(mcqs)
+        .set({ 
+          name,
+          parsed_content: parsedContent,
+        })
+        .where(eq(mcqs.id, mcqId))
+        .returning();
+
+      res.json(updatedMcq);
+    } catch (error: any) {
+      console.error('Update MCQ error:', error);
+      res.status(500).send(error.message || "Failed to update MCQ");
+    }
+  });
+
+  // Export to XLSX with optional selection
   app.get("/api/mcq/export/xlsx", async (req, res) => {
     try {
       let mcqHistory;
@@ -261,10 +299,10 @@ export function registerRoutes(app: Express): Server {
           .orderBy(desc(mcqs.created_at));
       }
 
+      // Transform data for Excel
       const data = mcqHistory.map(mcq => ({
         Name: mcq.name,
         Topic: mcq.topic,
-        Contributor: mcq.contributor || '',
         Rating: mcq.rating || 0,
         'Clinical Scenario': mcq.parsed_content.clinicalScenario,
         Question: mcq.parsed_content.question,
@@ -292,7 +330,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF endpoint
+  // Export to PDF with optional selection
   app.get("/api/mcq/export/pdf", async (req, res) => {
     try {
       let mcqHistory;
@@ -319,52 +357,47 @@ export function registerRoutes(app: Express): Server {
           doc.addPage();
         }
 
-        doc.fontSize(16).font('Helvetica-Bold').text(mcq.name);
-        doc.fontSize(12).font('Helvetica')
+        doc.font('Helvetica-Bold').fontSize(16).text(mcq.name);
+        doc.font('Helvetica').fontSize(12)
           .text(`Topic: ${mcq.topic} • Rating: ${mcq.rating || 0}/5 stars`);
-
-        if (mcq.contributor) {
-          doc.text(`Contributed by: ${mcq.contributor}`);
-        }
-
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Clinical Scenario');
-        doc.fontSize(12).font('Helvetica').text(mcq.parsed_content.clinicalScenario, {
+        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Scenario');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.clinicalScenario, {
           width: 500,
           align: 'justify'
         });
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Question');
-        doc.fontSize(12).font('Helvetica').text(mcq.parsed_content.question, {
+        doc.font('Helvetica-Bold').fontSize(14).text('Question');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.question, {
           width: 500,
           align: 'justify'
         });
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Options');
+        doc.font('Helvetica-Bold').fontSize(14).text('Options');
         Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.fontSize(12).font('Helvetica').text(`${letter}) ${text}`, {
+          doc.font('Helvetica').fontSize(12).text(`${letter}) ${text}`, {
             width: 500,
             indent: 20
           });
         });
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Correct Answer');
-        doc.fontSize(12).font('Helvetica').text(`Option ${mcq.parsed_content.correctAnswer}`);
+        doc.font('Helvetica-Bold').fontSize(14).text('Correct Answer');
+        doc.font('Helvetica').fontSize(12).text(`Option ${mcq.parsed_content.correctAnswer}`);
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Explanation');
-        doc.fontSize(12).font('Helvetica').text(mcq.parsed_content.explanation, {
+        doc.font('Helvetica-Bold').fontSize(14).text('Explanation');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.explanation, {
           width: 500,
           align: 'justify'
         });
 
         doc.moveDown()
-          .fontSize(10)
           .font('Helvetica-Oblique')
+          .fontSize(10)
           .text(`Created: ${new Date(mcq.created_at).toLocaleString()}`, {
             align: 'right'
           });
@@ -377,7 +410,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Export to PDF for learners (without answers)
+  // Export to PDF for learners (without answers) with optional selection
   app.get("/api/mcq/export/pdf/learner", async (req, res) => {
     try {
       let mcqHistory;
@@ -404,26 +437,26 @@ export function registerRoutes(app: Express): Server {
           doc.addPage();
         }
 
-        doc.fontSize(16).font('Helvetica-Bold').text(`Question ${index + 1}`);
+        doc.font('Helvetica-Bold').fontSize(16).text(`Question ${index + 1}`);
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Clinical Scenario');
-        doc.fontSize(12).font('Helvetica').text(mcq.parsed_content.clinicalScenario, {
+        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Scenario');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.clinicalScenario, {
           width: 500,
           align: 'justify'
         });
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Question');
-        doc.fontSize(12).font('Helvetica').text(mcq.parsed_content.question, {
+        doc.font('Helvetica-Bold').fontSize(14).text('Question');
+        doc.font('Helvetica').fontSize(12).text(mcq.parsed_content.question, {
           width: 500,
           align: 'justify'
         });
         doc.moveDown();
 
-        doc.fontSize(14).font('Helvetica-Bold').text('Options');
+        doc.font('Helvetica-Bold').fontSize(14).text('Options');
         Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.fontSize(12).font('Helvetica').text(`${letter}) ${text}`, {
+          doc.font('Helvetica').fontSize(12).text(`${letter}) ${text}`, {
             width: 500,
             indent: 20
           });
@@ -431,8 +464,8 @@ export function registerRoutes(app: Express): Server {
         doc.moveDown();
 
         doc.moveDown()
-          .fontSize(12)
           .font('Helvetica')
+          .fontSize(12)
           .text('Your Answer: _____', {
             align: 'left'
           })

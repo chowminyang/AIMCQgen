@@ -8,7 +8,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { encode } from "gpt-tokenizer";
 import type { MCQFormData } from "@/types";
@@ -21,7 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   referenceText: z.string().optional().default(""),
-  contributor: z.string().optional().default(""),
 });
 
 interface MCQFormProps {
@@ -71,7 +69,6 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
     defaultValues: {
       topic: "",
       referenceText: "",
-      contributor: "",
     },
   });
 
@@ -118,26 +115,6 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
               <FormControl>
                 <Input placeholder="Enter medical topic for MCQ..." {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="contributor"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contributor Name (Optional)</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter the name of the person who helped formulate this MCQ..." 
-                  {...field} 
-                />
-              </FormControl>
-              <FormDescription>
-                This will be shown in the exported Excel and PDF files (except learner PDFs).
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
