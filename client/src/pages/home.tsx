@@ -230,7 +230,7 @@ export default function Home() {
               <div>
                 <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  This app leverages OpenAI's o1-mini reasoning model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
+                  This app leverages OpenAI's o1 series of reasoning models to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   This application is experimental and copyrighted to <em className="font-bold">Chow Minyang, 2025</em>.
