@@ -48,7 +48,7 @@ export function AppInfoModal() {
                   <li>Express.js server handling HTTP requests</li>
                   <li>RESTful API endpoints for:
                     <ul className="list-circle pl-5 mt-1">
-                      <li>MCQ generation using OpenAI API</li>
+                      <li>MCQ generation using OpenAI API (supports o1-mini and o1-preview models)</li>
                       <li>CRUD operations for MCQs</li>
                       <li>User authentication</li>
                       <li>System prompt management</li>
@@ -78,7 +78,8 @@ export function AppInfoModal() {
                 <div>
                   <h4 className="font-medium">OpenAI Integration:</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Uses o1-mini model for generating MCQs</li>
+                    <li>Uses o1-mini model by default for generating MCQs</li>
+                    <li>Option to use o1-preview model for enhanced capabilities</li>
                     <li>Structured prompt system for consistent output</li>
                   </ul>
                 </div>

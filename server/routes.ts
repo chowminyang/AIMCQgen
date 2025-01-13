@@ -61,7 +61,10 @@ let currentPrompt = `You are an expert medical educator tasked with creating an 
 59:EXPLANATION:
 60:[Detailed explanation text]`;
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// Default model setting
+let currentModel = "o1-mini";
+
+// The newest OpenAI model "o1-mini" is the default choice
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -137,6 +140,26 @@ function parseGeneratedContent(content: string) {
 }
 
 export function registerRoutes(app: Express): Server {
+  // Add model selection endpoint
+  app.post("/api/settings/model", (req, res) => {
+    try {
+      const { model } = req.body;
+      if (model !== "o1-mini" && model !== "o1-preview") {
+        return res.status(400).send("Invalid model selection");
+      }
+      currentModel = model;
+      res.json({ success: true, currentModel });
+    } catch (error: any) {
+      console.error('Model selection error:', error);
+      res.status(500).send(error.message || "Failed to update model selection");
+    }
+  });
+
+  // Get current model endpoint
+  app.get("/api/settings/model", (_req, res) => {
+    res.json({ currentModel });
+  });
+
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
@@ -152,7 +175,7 @@ export function registerRoutes(app: Express): Server {
         .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Updated to use the correct model name
+        model: currentModel, // Use the selected model
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       });
@@ -166,7 +189,8 @@ export function registerRoutes(app: Express): Server {
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
         correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length
+        optionsCount: Object.keys(parsedContent.options).length,
+        model: currentModel // Log the model used
       });
 
       res.json({
