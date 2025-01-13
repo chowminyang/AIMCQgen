@@ -139,58 +139,6 @@ function parseGeneratedContent(content: string) {
   return parsedContent;
 }
 
-async function predictMCQDifficulty(mcq: {
-  clinicalScenario: string;
-  question: string;
-  options: Record<string, string>;
-  explanation: string;
-}): Promise<{
-  level: "easy" | "medium" | "hard";
-  confidence: number;
-  factors: string[];
-}> {
-  try {
-    const prompt = `Analyze this medical MCQ and determine its difficulty level. Consider:
-1. Clinical complexity
-2. Required knowledge depth
-3. Question type (recall vs. application)
-4. Number of concepts tested
-5. Language complexity
-
-Output JSON with:
-- level: "easy", "medium", or "hard"
-- confidence: number between 0 and 1
-- factors: array of strings explaining why this difficulty was assigned
-
-MCQ to analyze:
-Clinical Scenario: ${mcq.clinicalScenario}
-Question: ${mcq.question}
-Options:
-${Object.entries(mcq.options).map(([key, value]) => `${key}) ${value}`).join('\n')}
-Explanation: ${mcq.explanation}`;
-
-    const completion = await openai.chat.completions.create({
-      model: currentModel,
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    });
-
-    const result = JSON.parse(completion.choices[0].message.content);
-    return {
-      level: result.level,
-      confidence: result.confidence,
-      factors: result.factors,
-    };
-  } catch (error) {
-    console.error('Difficulty prediction error:', error);
-    return {
-      level: "medium",
-      confidence: 0.5,
-      factors: ["Fallback due to prediction error"],
-    };
-  }
-}
-
 export function registerRoutes(app: Express): Server {
   // Add model selection endpoint
   app.post("/api/settings/model", (req, res) => {
@@ -212,7 +160,7 @@ export function registerRoutes(app: Express): Server {
     res.json({ currentModel });
   });
 
-  // MCQ Generation endpoint update
+  // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
       const { topic, referenceText } = req.body;
@@ -237,22 +185,16 @@ export function registerRoutes(app: Express): Server {
       }
 
       const parsedContent = parseGeneratedContent(generatedContent);
-
-      // Get difficulty prediction for the generated MCQ
-      const difficultyPrediction = await predictMCQDifficulty(parsedContent);
-
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
         correctAnswer: parsedContent.correctAnswer,
         optionsCount: Object.keys(parsedContent.options).length,
-        difficultyPrediction,
-        model: currentModel
+        model: currentModel // Log the model used
       });
 
       res.json({
         raw: generatedContent,
-        parsed: parsedContent,
-        difficulty_prediction: difficultyPrediction
+        parsed: parsedContent
       });
     } catch (error: any) {
       console.error('MCQ generation error:', error);

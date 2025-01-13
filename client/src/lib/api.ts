@@ -1,9 +1,8 @@
-import type { MCQFormData, MCQResponse, MCQHistoryItem, ParsedMCQ, DifficultyPrediction } from "@/types";
+import type { MCQFormData, MCQResponse, MCQHistoryItem } from "@/types";
 
 export interface MCQResponse {
   raw: string;
   parsed: ParsedMCQ;
-  difficulty_prediction?: DifficultyPrediction;
 }
 
 export async function generateMCQ(data: MCQFormData): Promise<MCQResponse> {
