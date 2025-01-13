@@ -19,6 +19,11 @@ export const mcqs = pgTable("mcqs", {
   parsed_content: jsonb("parsed_content").$type<ParsedMCQ>().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   rating: integer("rating").default(0),
+  difficulty_prediction: jsonb("difficulty_prediction").$type<{
+    level: "easy" | "medium" | "hard",
+    confidence: number,
+    factors: string[]
+  }>(),
 });
 
 // Schema validations using zod
@@ -41,6 +46,11 @@ export const mcqSchema = z.object({
     explanation: z.string(),
   }),
   rating: z.number().min(0).max(5).default(0),
+  difficulty_prediction: z.object({
+    level: z.enum(["easy", "medium", "hard"]),
+    confidence: z.number().min(0).max(1),
+    factors: z.array(z.string())
+  }).optional(),
 });
 
 export const insertUserSchema = createInsertSchema(users);

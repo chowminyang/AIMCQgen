@@ -23,6 +23,14 @@ export interface ParsedMCQ {
   explanation: string;
 }
 
+export type DifficultyLevel = "easy" | "medium" | "hard";
+
+export interface DifficultyPrediction {
+  level: DifficultyLevel;
+  confidence: number;
+  factors: string[];
+}
+
 export interface MCQHistoryItem {
   id: number;
   name: string;
@@ -31,4 +39,5 @@ export interface MCQHistoryItem {
   parsed_content: ParsedMCQ;
   created_at: string;
   rating: number;
+  difficulty_prediction?: DifficultyPrediction;
 }
