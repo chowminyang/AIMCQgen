@@ -113,7 +113,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
             <FormItem>
               <FormLabel>Topic</FormLabel>
               <FormControl>
-                <Input id="topic-input" placeholder="Enter medical topic for MCQ..." {...field} />
+                <Input placeholder="Enter medical topic for MCQ..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
