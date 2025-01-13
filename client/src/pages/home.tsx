@@ -13,6 +13,7 @@ import type { ParsedMCQ, MCQHistoryItem, MCQFormData } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PromptEditor } from "@/components/prompt-editor";
 import { AppInfoModal } from "@/components/app-info-modal";
+import { ModelSelector } from "@/components/model-selector";
 
 export default function Home() {
   const { toast } = useToast();
@@ -232,6 +233,9 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground mt-2">
                   This application is experimental and copyrighted to <em className="font-bold">Chow Minyang, 2025</em>.
                 </p>
+                <div className="mt-4">
+                  <ModelSelector />
+                </div>
               </div>
               <AppInfoModal />
             </CardHeader>
