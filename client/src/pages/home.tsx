@@ -228,7 +228,7 @@ export default function Home() {
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Generating SBAs using reasoning LLMs</CardTitle>
+                <CardTitle className="mb-2">Generating SBAs using reasoning LLMs</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   This app leverages OpenAI's o1 series of reasoning models to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
                 </p>
@@ -253,7 +253,7 @@ export default function Home() {
           {isGenerating && (
             <Card className="w-full max-w-4xl mx-auto">
               <CardHeader>
-                <CardTitle>Generating MCQ...</CardTitle>
+                <CardTitle className="mb-2">Generating MCQ...</CardTitle>
               </CardHeader>
               <CardContent>
                 <MCQLoadingState />
@@ -265,7 +265,7 @@ export default function Home() {
             <div className="w-full max-w-4xl mx-auto">
               <Card>
                 <CardHeader>
-                  <CardTitle>
+                  <CardTitle className="mb-2">
                     {editingMCQ ? `Editing: ${editingMCQ.name}` : 'Edit MCQ'}
                   </CardTitle>
                 </CardHeader>
@@ -297,7 +297,7 @@ export default function Home() {
 
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle>MCQ Library</CardTitle>
+              <CardTitle className="mb-2">MCQ Library</CardTitle>
             </CardHeader>
             <CardContent>
               <MCQHistory
