@@ -50,11 +50,12 @@ app.use((req, res, next) => {
   next();
 });
 
+let server: any = null;
 
 (async () => {
   try {
     // Register routes
-    const server = registerRoutes(app);
+    server = registerRoutes(app);
     log("Routes registered");
 
     // Error handling middleware
@@ -74,13 +75,34 @@ app.use((req, res, next) => {
       log("Static serving setup complete");
     }
 
-    // Start server
+    // Start server with error handling
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
       log(`Server running on port ${PORT}`);
+    }).on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please free up the port and try again.`);
+        process.exit(1);
+      } else {
+        console.error('Server failed to start:', error);
+        process.exit(1);
+      }
     });
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
   }
 })();
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received. Closing server...');
+  if (server) {
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+});

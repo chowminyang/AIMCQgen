@@ -189,7 +189,7 @@ export function registerRoutes(app: Express): Server {
         name: parsedContent.name,
         correctAnswer: parsedContent.correctAnswer,
         optionsCount: Object.keys(parsedContent.options).length,
-        model: currentModel // Log the model used
+        model: currentModel
       });
 
       res.json({

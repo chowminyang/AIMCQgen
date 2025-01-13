@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PromptEditor } from "@/components/prompt-editor";
 import { AppInfoModal } from "@/components/app-info-modal";
 import { ModelSelector } from "@/components/model-selector";
+import { TutorialModal } from "@/components/tutorial-modal";
 
 export default function Home() {
   const { toast } = useToast();
@@ -237,7 +238,10 @@ export default function Home() {
                   <ModelSelector />
                 </div>
               </div>
-              <AppInfoModal />
+              <div className="flex flex-col gap-2">
+                <TutorialModal />
+                <AppInfoModal />
+              </div>
             </CardHeader>
             <CardContent>
               <MCQForm onSubmit={onGenerate} isLoading={isGenerating} />
