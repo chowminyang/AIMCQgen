@@ -29,8 +29,6 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf' | 'practice'>('excel');
   const [isExporting, setIsExporting] = useState(false);
-  //const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
-
 
   const copyToClipboard = (text: string, id: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -192,6 +190,16 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
     <>
       <div className="mb-4 flex flex-wrap justify-between gap-2">
         <div className="flex items-center gap-2">
+          <Checkbox
+            checked={selectedMcqs.size === items.length}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                setSelectedMcqs(new Set(items.map(item => item.id)));
+              } else {
+                setSelectedMcqs(new Set());
+              }
+            }}
+          />
           <span className="text-sm text-muted-foreground">
             {selectedMcqs.size} MCQ{selectedMcqs.size !== 1 ? 's' : ''} selected
           </span>
