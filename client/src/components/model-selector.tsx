@@ -16,8 +16,14 @@ export function ModelSelector() {
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="o1-mini">o1-mini</SelectItem>
-          <SelectItem value="o1-preview">o1-preview</SelectItem>
+          <SelectItem value="o1-mini" className="flex flex-col items-start">
+            <div className="font-medium">o1-mini</div>
+            <p className="text-xs text-muted-foreground">Lightweight reasoning model</p>
+          </SelectItem>
+          <SelectItem value="o1-preview" className="flex flex-col items-start">
+            <div className="font-medium">o1-preview</div>
+            <p className="text-xs text-muted-foreground">Powerful reasoning model</p>
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>
