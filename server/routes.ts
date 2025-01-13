@@ -175,9 +175,8 @@ export function registerRoutes(app: Express): Server {
         .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
-        model: currentModel, // Use the selected model
+        model: currentModel,
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
       });
 
       const generatedContent = completion.choices[0].message.content;

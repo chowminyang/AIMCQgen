@@ -16,8 +16,8 @@ export function ModelSelector() {
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="o1-mini">o1-mini (Default)</SelectItem>
-          <SelectItem value="o1-preview">o1-preview (Preview)</SelectItem>
+          <SelectItem value="o1-mini">o1-mini</SelectItem>
+          <SelectItem value="o1-preview">o1-preview</SelectItem>
         </SelectContent>
       </Select>
     </div>
