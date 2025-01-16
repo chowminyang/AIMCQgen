@@ -53,15 +53,15 @@ const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: n
           onMouseEnter={() => setHoveredRating({ id: itemId, rating: star })}
           onMouseLeave={() => setHoveredRating(null)}
           className={`hover:scale-110 transition-all duration-200 ${
-            (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+            (hoveredRating?.id === itemId && star <= hoveredRating.rating) ||
             (hoveredRating?.id !== itemId && star <= (rating || 0))
               ? 'text-yellow-400'
               : 'text-gray-300'
           } hover:text-yellow-400`}
         >
-          <Star 
+          <Star
             className={`h-4 w-4 transform ${
-              (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+              (hoveredRating?.id === itemId && star <= hoveredRating.rating) ||
               (hoveredRating?.id !== itemId && star <= (rating || 0))
                 ? 'fill-current'
                 : ''
@@ -73,16 +73,16 @@ const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: n
   );
 };
 
-function SortableAccordionItem({ 
-  item, 
-  onEdit, 
-  onDelete, 
-  onRate, 
-  selectedMcqs, 
-  toggleSelection, 
+function SortableAccordionItem({
+  item,
+  onEdit,
+  onDelete,
+  onRate,
+  selectedMcqs,
+  toggleSelection,
   copiedId,
   setDeleteConfirmId,
-  copyToClipboard
+  copyToClipboard,
 }: {
   item: MCQHistoryItem;
   onEdit: (mcq: MCQHistoryItem) => void;
@@ -124,7 +124,7 @@ function SortableAccordionItem({
           <div className="flex-1">
             <div className="font-medium">{item.name}</div>
             <div className="text-sm text-muted-foreground">
-              Topic: {item.topic} • {format(new Date(item.created_at), "PPpp")}
+              Topic: {item.topic} • Model: {item.model} • {format(new Date(item.created_at), "PPpp")}
             </div>
           </div>
           <StarRating rating={item.rating} onRate={onRate} itemId={item.id} />
@@ -383,8 +383,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               setExportType('excel');
               setPreviewModalOpen(true);
@@ -394,8 +394,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
             <FileSpreadsheet className="h-4 w-4" />
             Export {hasSelection ? 'Selected ' : ''}to Excel
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               setExportType('pdf');
               setPreviewModalOpen(true);
@@ -405,8 +405,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
             <FileText className="h-4 w-4" />
             Export {hasSelection ? 'Selected ' : ''}to PDF
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               setExportType('practice');
               setPreviewModalOpen(true);
