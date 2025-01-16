@@ -352,6 +352,7 @@ export function registerRoutes(app: Express): Server {
       const ws_data = mcqData.map(mcq => ({
         'Name': mcq.name,
         'Topic': mcq.topic,
+        'Model': mcq.model || 'o1-mini',
         'Clinical Scenario': mcq.parsed_content.clinicalScenario,
         'Question': mcq.parsed_content.question,
         'Option A': mcq.parsed_content.options.A,
@@ -371,6 +372,7 @@ export function registerRoutes(app: Express): Server {
       const colWidths = [
         { wch: 20 }, // Name
         { wch: 15 }, // Topic
+        { wch: 15 }, // Model
         { wch: 40 }, // Clinical Scenario
         { wch: 30 }, // Question
         { wch: 25 }, // Option A
