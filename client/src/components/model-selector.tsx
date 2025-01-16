@@ -26,7 +26,7 @@ export function ModelSelector() {
           </SelectItem>
           <SelectItem value="gpt-4o" className="flex flex-col items-start">
             <div className="font-medium">GPT-4o</div>
-            <p className="text-xs text-muted-foreground">Most advanced reasoning model</p>
+            <p className="text-xs text-muted-foreground">Latest OpenAI LLM</p>
           </SelectItem>
         </SelectContent>
       </Select>
