@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { queryClient } from "./queryClient";
 
 interface ModelState {
-  currentModel: "o1-mini" | "o1-preview" | "gpt4o";
-  setModel: (model: "o1-mini" | "o1-preview" | "gpt4o") => Promise<void>;
+  currentModel: "o1-mini" | "o1-preview" | "gpt-4o";
+  setModel: (model: "o1-mini" | "o1-preview" | "gpt-4o") => Promise<void>;
 }
 
 export const useModelStore = create<ModelState>((set) => ({
