@@ -643,10 +643,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Clinical scenario text is required");
       }
 
-      const prompt = `Please rewrite the following clinical scenario to be clear, concise, and grammatically correct while maintaining all medical details and information. Use present tense and professional medical language:\n\n${text}`;
+      const prompt = `Please rewrite the following clinical scenario to be clear, concise, and grammatically correct while maintaining all medical details and information:\n\n${text}`;
 
       const completion = await openai.chat.completions.create({
-        model: "o1-mini",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
       });
 
