@@ -634,6 +634,35 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Rewrite clinical scenario endpoint
+  app.post("/api/mcq/rewrite-scenario", async (req, res) => {
+    try {
+      const { text } = req.body;
+
+      if (!text) {
+        return res.status(400).send("Clinical scenario text is required");
+      }
+
+      const prompt = `Please rewrite the following clinical scenario to be clear, concise, and grammatically correct while maintaining all medical details and information. Use present tense and professional medical language:\n\n${text}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "o1-mini",
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const rewrittenText = completion.choices[0].message.content;
+      if (!rewrittenText) {
+        throw new Error("No content generated");
+      }
+
+      res.json({ text: rewrittenText });
+    } catch (error: any) {
+      console.error('Clinical scenario rewrite error:', error);
+      res.status(500).send(error.message || "Failed to rewrite clinical scenario");
+    }
+  });
+
+
   const httpServer = createServer(app);
   console.log('Routes registered successfully');
   return httpServer;

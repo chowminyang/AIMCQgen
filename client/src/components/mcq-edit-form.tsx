@@ -19,8 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Wand2 } from "lucide-react";
 import type { ParsedMCQ } from "@/types";
+import { rewriteClinicalScenario } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const mcqFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -48,6 +51,8 @@ type Props = {
 };
 
 export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
+  const { toast } = useToast();
+  const [isRewriting, setIsRewriting] = useState(false);
   const form = useForm<FormData>({
     resolver: zodResolver(mcqFormSchema),
     defaultValues: {
@@ -65,6 +70,36 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
       explanation: mcq.explanation || '',
     },
   });
+
+  const handleRewrite = async () => {
+    const currentText = form.getValues("clinicalScenario");
+    if (!currentText.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Clinical scenario field is empty",
+      });
+      return;
+    }
+
+    setIsRewriting(true);
+    try {
+      const rewrittenText = await rewriteClinicalScenario(currentText);
+      form.setValue("clinicalScenario", rewrittenText);
+      toast({
+        title: "Success",
+        description: "Clinical scenario has been rewritten",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to rewrite clinical scenario",
+      });
+    } finally {
+      setIsRewriting(false);
+    }
+  };
 
   const onSubmit = (data: FormData) => {
     onSave(data);
@@ -95,7 +130,24 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
           name="clinicalScenario"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Clinical Scenario</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Clinical Scenario</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRewrite}
+                  disabled={isRewriting}
+                  className="gap-2"
+                >
+                  {isRewriting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  {isRewriting ? "Rewriting..." : "Re-write with AI"}
+                </Button>
+              </div>
               <FormControl>
                 <Textarea
                   placeholder="Enter the clinical scenario..."

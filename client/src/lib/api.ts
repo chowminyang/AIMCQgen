@@ -71,3 +71,20 @@ export async function deleteMCQ(id: number): Promise<void> {
     throw new Error(await response.text());
   }
 }
+
+export async function rewriteClinicalScenario(text: string): Promise<string> {
+  const response = await fetch('/api/mcq/rewrite-scenario', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  const data = await response.json();
+  return data.text;
+}
