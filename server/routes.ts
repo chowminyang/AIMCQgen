@@ -64,7 +64,7 @@ let currentPrompt = `You are an expert medical educator tasked with creating an 
 // Default model setting
 let currentModel = "o1-mini";
 
-// The newest OpenAI model "o1-mini" is the default choice, with o1-preview as an option
+// The newest OpenAI model "o1-mini" is the default choice, with o1-preview and gpt4o as options
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -144,7 +144,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/settings/model", (req, res) => {
     try {
       const { model } = req.body;
-      if (!["o1-mini", "o1-preview", "o1"].includes(model)) {
+      if (!["o1-mini", "o1-preview", "gpt4o"].includes(model)) {
         return res.status(400).send("Invalid model selection");
       }
       currentModel = model;
