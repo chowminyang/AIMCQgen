@@ -19,6 +19,7 @@ export const mcqs = pgTable("mcqs", {
   parsed_content: jsonb("parsed_content").$type<ParsedMCQ>().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   rating: integer("rating").default(0),
+  model: text("model").notNull().default('o1-mini'),
 });
 
 // Schema validations using zod
@@ -41,6 +42,7 @@ export const mcqSchema = z.object({
     explanation: z.string(),
   }),
   rating: z.number().min(0).max(5).default(0),
+  model: z.enum(["o1-mini", "o1-preview", "gpt-4o"]).default("o1-mini"),
 });
 
 export const insertUserSchema = createInsertSchema(users);

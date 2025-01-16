@@ -205,7 +205,7 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { name, topic, rawContent, parsedContent } = req.body;
+      const { name, topic, rawContent, parsedContent, model } = req.body;
 
       if (!parsedContent || !name || name.trim() === '') {
         return res.status(400).send("MCQ name is required");
@@ -216,6 +216,7 @@ export function registerRoutes(app: Express): Server {
         topic: topic.trim(),
         raw_content: rawContent,
         parsed_content: parsedContent,
+        model: model || "o1-mini", // Use the current model or default to o1-mini
       }).returning();
 
       res.json(newMcq);
