@@ -151,7 +151,8 @@ export function MCQEditForm({ mcq, onSave, isLoading = false }: Props) {
               <FormControl>
                 <Textarea
                   placeholder="Enter the clinical scenario..."
-                  className="min-h-[200px]"
+                  className={`min-h-[200px] ${isRewriting ? 'opacity-50 cursor-wait' : ''}`}
+                  disabled={isRewriting}
                   {...field}
                 />
               </FormControl>
