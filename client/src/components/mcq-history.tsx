@@ -9,7 +9,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Copy, Check, Pencil, Trash, FileSpreadsheet, FileText, GraduationCap, Star, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MCQHistoryItem } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PreviewModal } from "./preview-modal";
@@ -38,7 +38,52 @@ interface MCQHistoryProps {
   onRate: (id: number, rating: number) => void;
 }
 
-function SortableAccordionItem({ item, onEdit, onDelete, onRate, selectedMcqs, toggleSelection, copiedId }: {
+const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: number, rating: number) => void; itemId: number }) => {
+  const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRate(itemId, star);
+          }}
+          onMouseEnter={() => setHoveredRating({ id: itemId, rating: star })}
+          onMouseLeave={() => setHoveredRating(null)}
+          className={`hover:scale-110 transition-all duration-200 ${
+            (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+            (hoveredRating?.id !== itemId && star <= (rating || 0))
+              ? 'text-yellow-400'
+              : 'text-gray-300'
+          } hover:text-yellow-400`}
+        >
+          <Star 
+            className={`h-4 w-4 transform ${
+              (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
+              (hoveredRating?.id !== itemId && star <= (rating || 0))
+                ? 'fill-current'
+                : ''
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+};
+
+function SortableAccordionItem({ 
+  item, 
+  onEdit, 
+  onDelete, 
+  onRate, 
+  selectedMcqs, 
+  toggleSelection, 
+  copiedId,
+  setDeleteConfirmId,
+  copyToClipboard
+}: {
   item: MCQHistoryItem;
   onEdit: (mcq: MCQHistoryItem) => void;
   onDelete: (id: number) => void;
@@ -46,6 +91,8 @@ function SortableAccordionItem({ item, onEdit, onDelete, onRate, selectedMcqs, t
   selectedMcqs: Set<number>;
   toggleSelection: (id: number) => void;
   copiedId: number | null;
+  setDeleteConfirmId: (id: number | null) => void;
+  copyToClipboard: (text: string, id: number) => void;
 }) {
   const {
     attributes,
@@ -169,7 +216,12 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf' | 'practice'>('excel');
   const [isExporting, setIsExporting] = useState(false);
-  const [orderedItems, setOrderedItems] = useState(items);
+  const [orderedItems, setOrderedItems] = useState<MCQHistoryItem[]>(items);
+
+  // Update orderedItems when items prop changes
+  useEffect(() => {
+    setOrderedItems(items);
+  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -302,41 +354,6 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
     return orderedItems.filter(item => selectedMcqs.has(item.id));
   };
 
-  const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: number, rating: number) => void; itemId: number }) => {
-    const [hoveredRating, setHoveredRating] = useState<{ id: number; rating: number } | null>(null);
-
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRate(itemId, star);
-            }}
-            onMouseEnter={() => setHoveredRating({ id: itemId, rating: star })}
-            onMouseLeave={() => setHoveredRating(null)}
-            className={`hover:scale-110 transition-all duration-200 ${
-              (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
-              (hoveredRating?.id !== itemId && star <= (rating || 0))
-                ? 'text-yellow-400'
-                : 'text-gray-300'
-            } hover:text-yellow-400`}
-          >
-            <Star 
-              className={`h-4 w-4 transform ${
-                (hoveredRating?.id === itemId && star <= hoveredRating.rating) || 
-                (hoveredRating?.id !== itemId && star <= (rating || 0))
-                  ? 'fill-current'
-                  : ''
-              }`}
-            />
-          </button>
-        ))}
-      </div>
-    );
-  };
-
   if (items.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -422,6 +439,8 @@ export function MCQHistory({ items, onEdit, onDelete, onRate }: MCQHistoryProps)
                 selectedMcqs={selectedMcqs}
                 toggleSelection={toggleSelection}
                 copiedId={copiedId}
+                setDeleteConfirmId={setDeleteConfirmId}
+                copyToClipboard={copyToClipboard}
               />
             ))}
           </SortableContext>
