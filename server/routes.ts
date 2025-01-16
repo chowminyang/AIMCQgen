@@ -457,7 +457,7 @@ export function registerRoutes(app: Express): Server {
           .text(`${index + 1}. ${mcq.name}`, { underline: true });
 
         doc.font('Helvetica').fontSize(12)
-          .text(`Topic: ${mcq.topic}`, { color: 'grey' });
+          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || 'o1-mini'}`, { color: 'grey' });
         doc.moveDown();
 
         // Clinical Scenario
