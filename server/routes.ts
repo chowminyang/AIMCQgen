@@ -49,8 +49,18 @@ const openai = new OpenAI({
 });
 
 function parseGeneratedContent(content: string) {
+  if (!content || typeof content !== 'string') {
+    console.error("Invalid content received:", content);
+    throw new Error("No content provided for parsing");
+  }
+
+  // Log the input content for debugging
+  console.log("Parsing content:", content);
+
   // Split into sections using a more flexible regex that handles different line break styles
   const sections = content.split(/\n\s*(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
+
+  console.log("Parsed sections:", sections);
 
   const parsedContent = {
     name: "",
@@ -70,10 +80,17 @@ function parseGeneratedContent(content: string) {
   for (const section of sections) {
     // Normalize whitespace and remove any BOM characters
     const cleanSection = section.trim().replace(/^\uFEFF/, '');
+
+    // Skip empty sections
+    if (!cleanSection) continue;
+
     // Extract header and content more reliably
     const [header, ...contentParts] = cleanSection.split(/:\s*/);
-    const trimmedHeader = header.trim().toUpperCase();
+    const trimmedHeader = header?.trim().toUpperCase();
     const sectionContent = contentParts.join(':').trim();
+
+    console.log(`Processing section: ${trimmedHeader}`);
+    console.log(`Content: ${sectionContent}`);
 
     switch (trimmedHeader) {
       case "NAME":
@@ -87,25 +104,36 @@ function parseGeneratedContent(content: string) {
         break;
       case "OPTIONS":
         // Improved option parsing with more flexible regex
-        const optionLines = sectionContent.split(/\n+/);
+        const optionLines = sectionContent.split(/\n+/).filter(line => line.trim());
         optionLines.forEach(line => {
-          const match = line.match(/^([A-E])[).]\s*(.+)$/);
+          const match = line.match(/^([A-E])[).:]\s*(.+)$/);
           if (match) {
             const [, letter, text] = match;
             parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
+          } else {
+            console.log(`Failed to parse option line: ${line}`);
           }
         });
         break;
       case "CORRECT ANSWER":
-        // Extract just the letter A-E, handle various formats like "Option A" or just "A"
+        // Extract just the letter A-E, handle various formats
         const answerMatch = sectionContent.match(/[A-E]/);
-        parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+        if (answerMatch) {
+          parsedContent.correctAnswer = answerMatch[0];
+        } else {
+          console.log(`Failed to parse correct answer: ${sectionContent}`);
+        }
         break;
       case "EXPLANATION":
         parsedContent.explanation = sectionContent;
         break;
+      default:
+        console.log(`Unknown section header: ${trimmedHeader}`);
     }
   }
+
+  // Log the final parsed content
+  console.log("Final parsed content:", JSON.stringify(parsedContent, null, 2));
 
   // Validate all required fields are present
   const isValid = parsedContent.name &&
