@@ -31,35 +31,36 @@ let currentPrompt = `You are an expert medical educator tasked with creating an 
 29:     a) One best and correct answer
 30:     b) One correct answer, but not the best option
 31:     c-e) Plausible options that might be correct, but are not the best answer
-32:   - Keep the length of all options consistent.
-33:   - Avoid misleading or ambiguously worded distractors.
-34:
-35:5. Correct Answer and Feedback:
-36:   - Identify the correct answer and explain why it is the best option.
-37:   - Provide option-specific explanations for why each option is correct or incorrect.
-38:
-39:Return your response in this EXACT format with these EXACT section headers:
-40:
-41:NAME:
-42:[MCQ name]
-43:
-44:CLINICAL SCENARIO:
-45:[Clinical scenario text]
-46:
-47:QUESTION:
-48:[Question text]
-49:
-50:OPTIONS:
-51:A) [Option A text]
-52:B) [Option B text]
-53:C) [Option C text]
-54:D) [Option D text]
-55:E) [Option E text]
-56:
-57:CORRECT ANSWER: [Single letter A-E]
-58:
-59:EXPLANATION:
-60:[Detailed explanation text]`;
+32:   - All options must be sorted alphabetically regardless of which is correct
+33:   - Keep the length of all options consistent.
+34:   - Avoid misleading or ambiguously worded distractors.
+35:
+36:5. Correct Answer and Feedback:
+37:   - Identify the correct answer and explain why it is the best option.
+38:   - Provide option-specific explanations for why each option is correct or incorrect.
+39:
+40:Return your response in this EXACT format with these EXACT section headers:
+41:
+42:NAME:
+43:[MCQ name]
+44:
+45:CLINICAL SCENARIO:
+46:[Clinical scenario text]
+47:
+48:QUESTION:
+49:[Question text]
+50:
+51:OPTIONS:
+52:A) [Option A text]
+53:B) [Option B text]
+54:C) [Option C text]
+55:D) [Option D text]
+56:E) [Option E text]
+57:
+58:CORRECT ANSWER: [Single letter A-E]
+59:
+60:EXPLANATION:
+61:[Detailed explanation text]`;
 
 // Default model setting
 let currentModel = "o1-mini";
