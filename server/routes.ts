@@ -82,7 +82,7 @@ function parseGeneratedContent(content: string) {
   if (nameMatch) parsedContent.name = nameMatch[1].trim();
   if (scenarioMatch) parsedContent.clinicalScenario = scenarioMatch[1].trim();
   if (questionMatch) parsedContent.question = questionMatch[1].trim();
-  
+
   if (optionsMatch) {
     const optionsText = optionsMatch[1];
     const optionRegex = /([A-E])[).:]\s*([^\n]+)/g;
