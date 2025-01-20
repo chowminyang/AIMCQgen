@@ -366,8 +366,8 @@ export function registerRoutes(app: Express): Server {
       XLSX.utils.book_append_sheet(wb, ws, "MCQs");
 
       // Generate buffer with proper encoding
-      const excelBuffer = XLSX.write(wb, { 
-        type: 'buffer', 
+      const excelBuffer = XLSX.write(wb, {
+        type: 'buffer',
         bookType: 'xlsx',
         bookSST: false,
         compression: true
