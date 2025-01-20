@@ -73,6 +73,29 @@ const StarRating = ({ rating, onRate, itemId }: { rating: number; onRate: (id: n
   );
 };
 
+function formatMCQContent(mcq: MCQHistoryItem): string {
+  return `NAME:
+${mcq.name}
+
+CLINICAL SCENARIO:
+${mcq.parsed_content.clinicalScenario}
+
+QUESTION:
+${mcq.parsed_content.question}
+
+OPTIONS:
+A) ${mcq.parsed_content.options.A}
+B) ${mcq.parsed_content.options.B}
+C) ${mcq.parsed_content.options.C}
+D) ${mcq.parsed_content.options.D}
+E) ${mcq.parsed_content.options.E}
+
+CORRECT ANSWER: ${mcq.parsed_content.correctAnswer}
+
+EXPLANATION:
+${mcq.parsed_content.explanation}`;
+}
+
 function SortableAccordionItem({
   item,
   onEdit,
@@ -136,7 +159,7 @@ function SortableAccordionItem({
             className="h-8 w-8"
             onClick={(e) => {
               e.stopPropagation();
-              copyToClipboard(item.raw_content, item.id);
+              copyToClipboard(formatMCQContent(item), item.id);
             }}
           >
             {copiedId === item.id ? (
