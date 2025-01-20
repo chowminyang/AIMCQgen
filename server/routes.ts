@@ -54,13 +54,7 @@ function parseGeneratedContent(content: string) {
     throw new Error("No content provided for parsing");
   }
 
-  // Log the input content for debugging
   console.log("Parsing content:", content);
-
-  // Split into sections using a more flexible regex that handles different line break styles
-  const sections = content.split(/\n\s*(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
-
-  console.log("Parsed sections:", sections);
 
   const parsedContent = {
     name: "",
@@ -77,77 +71,47 @@ function parseGeneratedContent(content: string) {
     explanation: "",
   };
 
-  for (const section of sections) {
-    // Normalize whitespace and remove any BOM characters
-    const cleanSection = section.trim().replace(/^\uFEFF/, '');
+  // More flexible section matching
+  const nameMatch = content.match(/NAME:\s*([^\n]+)/i);
+  const scenarioMatch = content.match(/CLINICAL SCENARIO:\s*([\s\S]+?)(?=QUESTION:|$)/i);
+  const questionMatch = content.match(/QUESTION:\s*([\s\S]+?)(?=OPTIONS:|$)/i);
+  const optionsMatch = content.match(/OPTIONS:\s*([\s\S]+?)(?=CORRECT ANSWER:|$)/i);
+  const answerMatch = content.match(/CORRECT ANSWER:\s*([A-E])/i);
+  const explanationMatch = content.match(/EXPLANATION:\s*([\s\S]+?)$/i);
 
-    // Skip empty sections
-    if (!cleanSection) continue;
-
-    // Extract header and content more reliably
-    const [header, ...contentParts] = cleanSection.split(/:\s*/);
-    const trimmedHeader = header?.trim().toUpperCase();
-    const sectionContent = contentParts.join(':').trim();
-
-    console.log(`Processing section: ${trimmedHeader}`);
-    console.log(`Content: ${sectionContent}`);
-
-    switch (trimmedHeader) {
-      case "NAME":
-        parsedContent.name = sectionContent;
-        break;
-      case "CLINICAL SCENARIO":
-        parsedContent.clinicalScenario = sectionContent;
-        break;
-      case "QUESTION":
-        parsedContent.question = sectionContent;
-        break;
-      case "OPTIONS":
-        // Improved option parsing with more flexible regex
-        const optionLines = sectionContent.split(/\n+/).filter(line => line.trim());
-        optionLines.forEach(line => {
-          const match = line.match(/^([A-E])[).:]\s*(.+)$/);
-          if (match) {
-            const [, letter, text] = match;
-            parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
-          } else {
-            console.log(`Failed to parse option line: ${line}`);
-          }
-        });
-        break;
-      case "CORRECT ANSWER":
-        // Extract just the letter A-E, handle various formats
-        const answerMatch = sectionContent.match(/[A-E]/);
-        if (answerMatch) {
-          parsedContent.correctAnswer = answerMatch[0];
-        } else {
-          console.log(`Failed to parse correct answer: ${sectionContent}`);
-        }
-        break;
-      case "EXPLANATION":
-        parsedContent.explanation = sectionContent;
-        break;
-      default:
-        console.log(`Unknown section header: ${trimmedHeader}`);
+  if (nameMatch) parsedContent.name = nameMatch[1].trim();
+  if (scenarioMatch) parsedContent.clinicalScenario = scenarioMatch[1].trim();
+  if (questionMatch) parsedContent.question = questionMatch[1].trim();
+  
+  if (optionsMatch) {
+    const optionsText = optionsMatch[1];
+    const optionRegex = /([A-E])[).:]\s*([^\n]+)/g;
+    let optionMatch;
+    while ((optionMatch = optionRegex.exec(optionsText)) !== null) {
+      const [, letter, text] = optionMatch;
+      parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
     }
   }
 
-  // Log the final parsed content
-  console.log("Final parsed content:", JSON.stringify(parsedContent, null, 2));
+  if (answerMatch) parsedContent.correctAnswer = answerMatch[1].trim();
+  if (explanationMatch) parsedContent.explanation = explanationMatch[1].trim();
 
-  // Validate all required fields are present
-  const isValid = parsedContent.name &&
-                 parsedContent.clinicalScenario &&
-                 parsedContent.question &&
-                 Object.values(parsedContent.options).every(Boolean) &&
-                 /^[A-E]$/.test(parsedContent.correctAnswer) &&
-                 parsedContent.explanation;
+  // Validate the parsed content
+  const missingFields = [];
+  if (!parsedContent.name) missingFields.push("NAME");
+  if (!parsedContent.clinicalScenario) missingFields.push("CLINICAL SCENARIO");
+  if (!parsedContent.question) missingFields.push("QUESTION");
+  if (!Object.values(parsedContent.options).every(Boolean)) missingFields.push("OPTIONS");
+  if (!/^[A-E]$/.test(parsedContent.correctAnswer)) missingFields.push("CORRECT ANSWER");
+  if (!parsedContent.explanation) missingFields.push("EXPLANATION");
 
-  if (!isValid) {
-    console.error("Invalid parsed content:", JSON.stringify(parsedContent, null, 2));
-    throw new Error("Failed to parse generated MCQ content correctly. Please ensure all sections are present and properly formatted.");
+  if (missingFields.length > 0) {
+    console.error("Missing or invalid fields:", missingFields);
+    console.error("Parsed content:", JSON.stringify(parsedContent, null, 2));
+    throw new Error(`Failed to parse MCQ content. Missing or invalid sections: ${missingFields.join(", ")}`);
   }
 
+  console.log("Successfully parsed MCQ content");
   return parsedContent;
 }
 
