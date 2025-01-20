@@ -27,7 +27,7 @@ let currentPrompt = `You are an expert medical educator tasked with creating an 
 25:   - Avoid including obvious investigations or management options that would immediately give away the answer.
 26:
 27:4. Multiple Choice Options:
-28:   - Provide 5 options (A-E) in alphabetical order:
+28:   - Provide 5 options (A-E) in STRICTLY alphabetical order:
 29:     a) One best and correct answer
 30:     b) One correct answer, but not the best option
 31:     c-e) Plausible options that might be correct, but are not the best answer
