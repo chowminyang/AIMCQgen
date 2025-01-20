@@ -9,36 +9,57 @@ import XLSX from "xlsx";
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
-
-Please follow these steps to create the question:
-
-1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
-
-2. Clinical Scenario:
-   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
-   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
-   - Use ONLY standard international units with reference ranges for any test results.
-   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
-
-3. Question:
-   - Test second-order thinking skills about {topic}.
-   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-   - Do not reveal or hint at the diagnosis in the question.
-   - Avoid including obvious investigations or management options that would immediately give away the answer.
-
-4. Multiple Choice Options:
-   - Provide 5 options (A-E).
-   - IMPORTANT: Sort all options alphabetically regardless of which is correct.
-   - Include:
-     • One best and correct answer
-     • One correct answer, but not the best option
-     • Three plausible options that might be correct, but are not the best answer
-   - Keep the length of all options consistent.
-   - Avoid misleading or ambiguously worded distractors.
-
-5. Correct Answer and Feedback:
-   - Identify the correct answer and explain why it is the best option.
-   - Provide option-specific explanations for why each option is correct or incorrect.`;
+10:
+11:Please follow these steps to create the question:
+12:
+13:1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
+14:
+15:2. Clinical Scenario:
+16:   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
+17:   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+18:   - Use ONLY standard international units with reference ranges for any test results.
+19:   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+20:
+21:3. Question:
+22:   - Test second-order thinking skills about {topic}.
+23:   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+24:   - Do not reveal or hint at the diagnosis in the question.
+25:   - Avoid including obvious investigations or management options that would immediately give away the answer.
+26:
+27:4. Multiple Choice Options:
+28:   - Provide 5 options (A-E) in alphabetical order:
+29:     a) One best and correct answer
+30:     b) One correct answer, but not the best option
+31:     c-e) Plausible options that might be correct, but are not the best answer
+32:   - Keep the length of all options consistent.
+33:   - Avoid misleading or ambiguously worded distractors.
+34:
+35:5. Correct Answer and Feedback:
+36:   - Identify the correct answer and explain why it is the best option.
+37:   - Provide option-specific explanations for why each option is correct or incorrect.
+38:
+39:Return your response in this EXACT format with these EXACT section headers:
+40:
+41:NAME:
+42:[MCQ name]
+43:
+44:CLINICAL SCENARIO:
+45:[Clinical scenario text]
+46:
+47:QUESTION:
+48:[Question text]
+49:
+50:OPTIONS:
+51:A) [Option A text]
+52:B) [Option B text]
+53:C) [Option C text]
+54:D) [Option D text]
+55:E) [Option E text]
+56:
+57:CORRECT ANSWER: [Single letter A-E]
+58:
+59:EXPLANATION:
+60:[Detailed explanation text]`;
 
 // Default model setting
 let currentModel = "o1-mini";
@@ -49,12 +70,7 @@ const openai = new OpenAI({
 });
 
 function parseGeneratedContent(content: string) {
-  if (!content || typeof content !== 'string') {
-    console.error("Invalid content received:", content);
-    throw new Error("No content provided for parsing");
-  }
-
-  console.log("Parsing content:", content);
+  const sections = content.split(/\n\n(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
 
   const parsedContent = {
     name: "",
@@ -71,47 +87,55 @@ function parseGeneratedContent(content: string) {
     explanation: "",
   };
 
-  // More flexible section matching
-  const nameMatch = content.match(/NAME:\s*([^\n]+)/i);
-  const scenarioMatch = content.match(/CLINICAL SCENARIO:\s*([\s\S]+?)(?=QUESTION:|$)/i);
-  const questionMatch = content.match(/QUESTION:\s*([\s\S]+?)(?=OPTIONS:|$)/i);
-  const optionsMatch = content.match(/OPTIONS:\s*([\s\S]+?)(?=CORRECT ANSWER:|$)/i);
-  const answerMatch = content.match(/CORRECT ANSWER:\s*([A-E])/i);
-  const explanationMatch = content.match(/EXPLANATION:\s*([\s\S]+?)$/i);
+  for (const section of sections) {
+    const [header, ...contentLines] = section.split(/:\s*/);
+    const trimmedHeader = header.trim().toUpperCase();
+    const sectionContent = contentLines.join(":").trim();
 
-  if (nameMatch) parsedContent.name = nameMatch[1].trim();
-  if (scenarioMatch) parsedContent.clinicalScenario = scenarioMatch[1].trim();
-  if (questionMatch) parsedContent.question = questionMatch[1].trim();
-
-  if (optionsMatch) {
-    const optionsText = optionsMatch[1];
-    const optionRegex = /([A-E])[).:]\s*([^\n]+)/g;
-    let optionMatch;
-    while ((optionMatch = optionRegex.exec(optionsText)) !== null) {
-      const [, letter, text] = optionMatch;
-      parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
+    switch (trimmedHeader) {
+      case "NAME":
+        parsedContent.name = sectionContent;
+        break;
+      case "CLINICAL SCENARIO":
+        parsedContent.clinicalScenario = sectionContent;
+        break;
+      case "QUESTION":
+        parsedContent.question = sectionContent;
+        break;
+      case "OPTIONS":
+        const options = sectionContent.split(/\n/);
+        options.forEach(option => {
+          const match = option.match(/^([A-E])\)\s*(.+)$/);
+          if (match) {
+            const [, letter, text] = match;
+            parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
+          }
+        });
+        break;
+      case "CORRECT ANSWER":
+        // Extract just the letter A-E, ignore any additional text
+        const answerMatch = sectionContent.match(/[A-E]/);
+        parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
+        break;
+      case "EXPLANATION":
+        parsedContent.explanation = sectionContent;
+        break;
     }
   }
 
-  if (answerMatch) parsedContent.correctAnswer = answerMatch[1].trim();
-  if (explanationMatch) parsedContent.explanation = explanationMatch[1].trim();
+  // Validate parsed content
+  const isValid = parsedContent.name &&
+                 parsedContent.clinicalScenario &&
+                 parsedContent.question &&
+                 Object.values(parsedContent.options).every(Boolean) &&
+                 /^[A-E]$/.test(parsedContent.correctAnswer) &&
+                 parsedContent.explanation;
 
-  // Validate the parsed content
-  const missingFields = [];
-  if (!parsedContent.name) missingFields.push("NAME");
-  if (!parsedContent.clinicalScenario) missingFields.push("CLINICAL SCENARIO");
-  if (!parsedContent.question) missingFields.push("QUESTION");
-  if (!Object.values(parsedContent.options).every(Boolean)) missingFields.push("OPTIONS");
-  if (!/^[A-E]$/.test(parsedContent.correctAnswer)) missingFields.push("CORRECT ANSWER");
-  if (!parsedContent.explanation) missingFields.push("EXPLANATION");
-
-  if (missingFields.length > 0) {
-    console.error("Missing or invalid fields:", missingFields);
-    console.error("Parsed content:", JSON.stringify(parsedContent, null, 2));
-    throw new Error(`Failed to parse MCQ content. Missing or invalid sections: ${missingFields.join(", ")}`);
+  if (!isValid) {
+    console.error("Invalid parsed content:", parsedContent);
+    throw new Error("Failed to parse generated MCQ content correctly");
   }
 
-  console.log("Successfully parsed MCQ content");
   return parsedContent;
 }
 
@@ -366,8 +390,8 @@ export function registerRoutes(app: Express): Server {
       XLSX.utils.book_append_sheet(wb, ws, "MCQs");
 
       // Generate buffer with proper encoding
-      const excelBuffer = XLSX.write(wb, {
-        type: 'buffer',
+      const excelBuffer = XLSX.write(wb, { 
+        type: 'buffer', 
         bookType: 'xlsx',
         bookSST: false,
         compression: true
