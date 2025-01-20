@@ -49,7 +49,8 @@ const openai = new OpenAI({
 });
 
 function parseGeneratedContent(content: string) {
-  const sections = content.split(/\n\n(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
+  // Split into sections using a more flexible regex that handles different line break styles
+  const sections = content.split(/\n\s*(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
 
   const parsedContent = {
     name: "",
@@ -67,9 +68,12 @@ function parseGeneratedContent(content: string) {
   };
 
   for (const section of sections) {
-    const [header, ...contentLines] = section.split(/:\s*/);
+    // Normalize whitespace and remove any BOM characters
+    const cleanSection = section.trim().replace(/^\uFEFF/, '');
+    // Extract header and content more reliably
+    const [header, ...contentParts] = cleanSection.split(/:\s*/);
     const trimmedHeader = header.trim().toUpperCase();
-    const sectionContent = contentLines.join(":").trim();
+    const sectionContent = contentParts.join(':').trim();
 
     switch (trimmedHeader) {
       case "NAME":
@@ -82,9 +86,10 @@ function parseGeneratedContent(content: string) {
         parsedContent.question = sectionContent;
         break;
       case "OPTIONS":
-        const options = sectionContent.split(/\n/);
-        options.forEach(option => {
-          const match = option.match(/^([A-E])\)\s*(.+)$/);
+        // Improved option parsing with more flexible regex
+        const optionLines = sectionContent.split(/\n+/);
+        optionLines.forEach(line => {
+          const match = line.match(/^([A-E])[).]\s*(.+)$/);
           if (match) {
             const [, letter, text] = match;
             parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
@@ -92,7 +97,7 @@ function parseGeneratedContent(content: string) {
         });
         break;
       case "CORRECT ANSWER":
-        // Extract just the letter A-E, ignore any additional text
+        // Extract just the letter A-E, handle various formats like "Option A" or just "A"
         const answerMatch = sectionContent.match(/[A-E]/);
         parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
         break;
@@ -102,7 +107,7 @@ function parseGeneratedContent(content: string) {
     }
   }
 
-  // Validate parsed content
+  // Validate all required fields are present
   const isValid = parsedContent.name &&
                  parsedContent.clinicalScenario &&
                  parsedContent.question &&
@@ -111,8 +116,8 @@ function parseGeneratedContent(content: string) {
                  parsedContent.explanation;
 
   if (!isValid) {
-    console.error("Invalid parsed content:", parsedContent);
-    throw new Error("Failed to parse generated MCQ content correctly");
+    console.error("Invalid parsed content:", JSON.stringify(parsedContent, null, 2));
+    throw new Error("Failed to parse generated MCQ content correctly. Please ensure all sections are present and properly formatted.");
   }
 
   return parsedContent;
