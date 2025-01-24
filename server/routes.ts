@@ -111,15 +111,13 @@ export function registerRoutes(app: Express): Server {
       // Replace the topic placeholder in the prompt
       const prompt = currentPrompt
         .replace(/\{topic\}/g, topic)
-        .replace(/\{referenceText\}/, referenceText ? `\n\nUse this reference text in your explanations where relevant:\n${referenceText}` : '');
+        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
 
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [{ 
-          role: currentModel === "o1-mini" ? "user" : "developer",
-          content: currentModel === "o1-mini" 
-            ? `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question. ${prompt}`
-            : prompt 
+          role: "developer", 
+          content: prompt 
         }],
         response_format: { type: "json_object" }
       });
