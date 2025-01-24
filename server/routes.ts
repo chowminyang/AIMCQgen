@@ -35,6 +35,7 @@ Please follow these steps to create the question:
 
 4. Correct Answer and Explanation:
    - Provide a detailed explanation of why the correct answer is best and why each other option is incorrect.
+{referenceText}
 
 Return your response in this exact JSON format:
 
