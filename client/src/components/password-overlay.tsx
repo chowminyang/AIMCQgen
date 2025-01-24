@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,9 @@ export function PasswordOverlay({ onSuccess }: PasswordOverlayProps) {
             <Lock className="w-5 h-5" />
             Enter Password to Continue
           </DialogTitle>
+          <DialogDescription>
+            Enter the application password to access the MCQ Generator
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
