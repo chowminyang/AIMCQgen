@@ -9,135 +9,72 @@ import XLSX from "xlsx";
 
 // Store the current prompt in memory
 let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
-10:
-11:Please follow these steps to create the question:
-12:
-13:1. Give this MCQ a concise descriptive name that summarizes its content (e.g., "Acute Pancreatitis Management", "Beta-Blocker Pharmacology").
-14:
-15:2. Clinical Scenario:
-16:   - Write a clinical scenario about {topic} in the present tense (maximum 120 words).
-17:   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
-18:   - Use ONLY standard international units with reference ranges for any test results.
-19:   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
-20:
-21:3. Question:
-22:   - Test second-order thinking skills about {topic}.
-23:   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-24:   - Do not reveal or hint at the diagnosis in the question.
-25:   - Avoid including obvious investigations or management options that would immediately give away the answer.
-26:
-27:4. Multiple Choice Options:
-28:   - Provide 5 options (A-E) in STRICTLY alphabetical order:
-29:     a) One best and correct answer
-30:     b) One correct answer, but not the best option
-31:     c-e) Plausible options that might be correct, but are not the best answer
-32:   - All options must be sorted alphabetically regardless of which is correct
-33:   - Keep the length of all options consistent.
-34:   - Avoid misleading or ambiguously worded distractors.
-35:
-36:5. Correct Answer and Feedback:
-37:   - Identify the correct answer and explain why it is the best option.
-38:   - Provide option-specific explanations for why each option is correct or incorrect.
-39:
-40:Return your response in this EXACT format with these EXACT section headers:
-41:
-42:NAME:
-43:[MCQ name]
-44:
-45:CLINICAL SCENARIO:
-46:[Clinical scenario text]
-47:
-48:QUESTION:
-49:[Question text]
-50:
-51:OPTIONS:
-52:A) [Option A text]
-53:B) [Option B text]
-54:C) [Option C text]
-55:D) [Option D text]
-56:E) [Option E text]
-57:
-58:CORRECT ANSWER: [Single letter A-E]
-59:
-60:EXPLANATION:
-61:[Detailed explanation text]`;
+
+Please follow these steps to create the question:
+
+1. Clinical Scenario:
+   - Write a clinical scenario in the present tense (maximum 120 words).
+   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+   - Use ONLY standard international units with reference ranges for any test results.
+   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+
+2. Question:
+   - Test second-order thinking skills about {topic}.
+   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+   - Do not reveal or hint at the diagnosis in the question.
+   - Avoid including obvious investigations or management options that would immediately give away the answer.
+
+3. Multiple Choice Options:
+   - Provide 5 options (A-E) in STRICTLY alphabetical order:
+     a) One best and correct answer
+     b) One correct answer, but not the best option
+     c-e) Plausible options that might be correct, but are not the best answer
+   - All options must be sorted alphabetically regardless of which is correct
+   - Keep the length of all options consistent.
+   - Avoid misleading or ambiguously worded distractors.
+
+4. Correct Answer and Explanation:
+   - Provide a detailed explanation of why the correct answer is best and why each other option is incorrect.
+
+Return your response in this exact JSON format:
+
+{
+  "name": "Descriptive name of the MCQ",
+  "clinical_scenario": "Clinical scenario text",
+  "question": "Question text",
+  "options": {
+    "A": "Option A text",
+    "B": "Option B text",
+    "C": "Option C text",
+    "D": "Option D text",
+    "E": "Option E text"
+  },
+  "correct_answer": "Single letter A-E",
+  "explanation": "Combined explanation for correct and incorrect answers"
+}`;
 
 // Default model setting
 let currentModel = "o1-mini";
 
-// The newest OpenAI model "o1-mini" is the default choice, with o1-preview and gpt-4o as options
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 function parseGeneratedContent(content: string) {
-  const sections = content.split(/\n\n(?=NAME:|CLINICAL SCENARIO:|QUESTION:|OPTIONS:|CORRECT ANSWER:|EXPLANATION:)/i);
-
-  const parsedContent = {
-    name: "",
-    clinicalScenario: "",
-    question: "",
-    options: {
-      A: "",
-      B: "",
-      C: "",
-      D: "",
-      E: "",
-    },
-    correctAnswer: "",
-    explanation: "",
-  };
-
-  for (const section of sections) {
-    const [header, ...contentLines] = section.split(/:\s*/);
-    const trimmedHeader = header.trim().toUpperCase();
-    const sectionContent = contentLines.join(":").trim();
-
-    switch (trimmedHeader) {
-      case "NAME":
-        parsedContent.name = sectionContent;
-        break;
-      case "CLINICAL SCENARIO":
-        parsedContent.clinicalScenario = sectionContent;
-        break;
-      case "QUESTION":
-        parsedContent.question = sectionContent;
-        break;
-      case "OPTIONS":
-        const options = sectionContent.split(/\n/);
-        options.forEach(option => {
-          const match = option.match(/^([A-E])\)\s*(.+)$/);
-          if (match) {
-            const [, letter, text] = match;
-            parsedContent.options[letter as keyof typeof parsedContent.options] = text.trim();
-          }
-        });
-        break;
-      case "CORRECT ANSWER":
-        // Extract just the letter A-E, ignore any additional text
-        const answerMatch = sectionContent.match(/[A-E]/);
-        parsedContent.correctAnswer = answerMatch ? answerMatch[0] : "";
-        break;
-      case "EXPLANATION":
-        parsedContent.explanation = sectionContent;
-        break;
-    }
+  try {
+    const jsonContent = JSON.parse(content);
+    return {
+      name: jsonContent.name,
+      clinicalScenario: jsonContent.clinical_scenario,
+      question: jsonContent.question,
+      options: jsonContent.options,
+      correctAnswer: jsonContent.correct_answer,
+      explanation: jsonContent.explanation,
+    };
+  } catch (error) {
+    console.error("Failed to parse JSON content:", error);
+    throw new Error("Failed to parse generated MCQ content");
   }
-
-  // Validate parsed content
-  const isValid = parsedContent.name &&
-                 parsedContent.clinicalScenario &&
-                 parsedContent.question &&
-                 Object.values(parsedContent.options).every(Boolean) &&
-                 /^[A-E]$/.test(parsedContent.correctAnswer) &&
-                 parsedContent.explanation;
-
-  if (!isValid) {
-    console.error("Invalid parsed content:", parsedContent);
-    throw new Error("Failed to parse generated MCQ content correctly");
-  }
-
-  return parsedContent;
 }
 
 export function registerRoutes(app: Express): Server {
@@ -145,7 +82,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/settings/model", (req, res) => {
     try {
       const { model } = req.body;
-      if (!["o1-mini", "o1-preview", "gpt-4o"].includes(model)) {
+      if (!["o1-mini", "o1", "gpt-4o"].includes(model)) {
         return res.status(400).send("Invalid model selection");
       }
       currentModel = model;
@@ -177,7 +114,11 @@ export function registerRoutes(app: Express): Server {
 
       const completion = await openai.chat.completions.create({
         model: currentModel,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ 
+          role: "developer", 
+          content: prompt 
+        }],
+        response_format: { type: "json_object" }
       });
 
       const generatedContent = completion.choices[0].message.content;

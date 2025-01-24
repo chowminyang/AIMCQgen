@@ -10,7 +10,7 @@ export function ModelSelector() {
       <Label htmlFor="model-select">AI Model</Label>
       <Select 
         value={currentModel} 
-        onValueChange={(value: "o1-mini" | "o1-preview" | "gpt-4o") => setModel(value)}
+        onValueChange={(value: "o1-mini" | "o1" | "gpt-4o") => setModel(value)}
       >
         <SelectTrigger id="model-select" className="w-[200px]">
           <SelectValue placeholder="Select model" />
@@ -20,9 +20,9 @@ export function ModelSelector() {
             <div className="font-medium">o1-mini</div>
             <p className="text-xs text-muted-foreground">Lightweight reasoning model</p>
           </SelectItem>
-          <SelectItem value="o1-preview" className="flex flex-col items-start">
-            <div className="font-medium">o1-preview</div>
-            <p className="text-xs text-muted-foreground">Powerful reasoning model</p>
+          <SelectItem value="o1" className="flex flex-col items-start">
+            <div className="font-medium">o1</div>
+            <p className="text-xs text-muted-foreground">Enhanced reasoning model</p>
           </SelectItem>
           <SelectItem value="gpt-4o" className="flex flex-col items-start">
             <div className="font-medium">GPT-4o</div>
