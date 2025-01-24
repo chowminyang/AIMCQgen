@@ -2,12 +2,12 @@ import { create } from "zustand";
 import { queryClient } from "./queryClient";
 
 interface ModelState {
-  currentModel: "o1-mini" | "o1" | "gpt-4o";
-  setModel: (model: "o1-mini" | "o1" | "gpt-4o") => Promise<void>;
+  currentModel: "o1";
+  setModel: (model: "o1") => Promise<void>;
 }
 
 export const useModelStore = create<ModelState>((set) => ({
-  currentModel: "o1-mini",
+  currentModel: "o1",
   setModel: async (model) => {
     try {
       await fetch("/api/settings/model", {

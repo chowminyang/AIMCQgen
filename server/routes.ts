@@ -55,7 +55,7 @@ Return your response in this exact JSON format:
 }`;
 
 // Default model setting
-let currentModel = "o1-mini";
+let currentModel = "o1";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -83,7 +83,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/settings/model", (req, res) => {
     try {
       const { model } = req.body;
-      if (!["o1-mini", "o1", "gpt-4o"].includes(model)) {
+      if (model !== "o1") {
         return res.status(400).send("Invalid model selection");
       }
       currentModel = model;
@@ -159,7 +159,7 @@ export function registerRoutes(app: Express): Server {
         topic: topic.trim(),
         raw_content: rawContent,
         parsed_content: parsedContent,
-        model: model || "o1-mini", // Use the current model or default to o1-mini
+        model: model || "o1", // Use the current model or default to o1-mini
       }).returning();
 
       res.json(newMcq);
@@ -295,7 +295,7 @@ export function registerRoutes(app: Express): Server {
       const ws_data = mcqData.map(mcq => ({
         'Name': mcq.name,
         'Topic': mcq.topic,
-        'Model': mcq.model || 'o1-mini',
+        'Model': mcq.model || 'o1',
         'Clinical Scenario': mcq.parsed_content.clinicalScenario,
         'Question': mcq.parsed_content.question,
         'Option A': mcq.parsed_content.options.A,
@@ -402,7 +402,7 @@ export function registerRoutes(app: Express): Server {
           .text(`${index + 1}. ${mcq.name}`, { underline: true });
 
         doc.font('Helvetica').fontSize(12)
-          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || 'o1-mini'}`, { color: 'grey' });
+          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || 'o1'}`, { color: 'grey' });
         doc.moveDown();
 
         // Clinical Scenario
