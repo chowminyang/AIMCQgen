@@ -102,7 +102,7 @@ export function registerRoutes(app: Express): Server {
   // MCQ Generation endpoint
   app.post("/api/mcq/generate", async (req, res) => {
     try {
-      const { topic, referenceText } = req.body;
+      const { topic, referenceText, reasoningEffort = "medium" } = req.body;
 
       if (!topic) {
         return res.status(400).send("Topic is required");
@@ -119,7 +119,8 @@ export function registerRoutes(app: Express): Server {
           role: "developer", 
           content: prompt 
         }],
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        reasoning_effort: reasoningEffort
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -132,7 +133,8 @@ export function registerRoutes(app: Express): Server {
         name: parsedContent.name,
         correctAnswer: parsedContent.correctAnswer,
         optionsCount: Object.keys(parsedContent.options).length,
-        model: currentModel
+        model: currentModel,
+        reasoningEffort
       });
 
       res.json({

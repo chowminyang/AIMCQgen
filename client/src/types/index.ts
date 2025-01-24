@@ -1,6 +1,7 @@
 export interface MCQFormData {
   topic: string;
   referenceText?: string;
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 export interface MCQResponse {

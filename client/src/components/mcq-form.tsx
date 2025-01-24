@@ -16,10 +16,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ReasoningEffortSelector } from "./reasoning-effort-selector";
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   referenceText: z.string().optional().default(""),
+  reasoningEffort: z.enum(["low", "medium", "high"]).default("medium"),
 });
 
 interface MCQFormProps {
@@ -56,9 +58,8 @@ Please follow these steps to create the question:
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
 
-4. Correct Answer and Feedback:
-   - Identify the correct answer and explain why it is the best option.
-   - Provide option-specific explanations for why each option is correct or incorrect.`;
+4. Correct Answer and Explanation:
+   - Provide a detailed explanation of why the correct answer is best and why each other option is incorrect.`;
 
 const REFERENCE_TEXT_PREFIX = "   - Use this reference text in your explanations where relevant: ";
 
@@ -69,6 +70,7 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
     defaultValues: {
       topic: "",
       referenceText: "",
+      reasoningEffort: "medium",
     },
   });
 
@@ -114,6 +116,22 @@ export function MCQForm({ onSubmit, isLoading }: MCQFormProps) {
               <FormLabel>Topic</FormLabel>
               <FormControl>
                 <Input placeholder="Enter medical topic for MCQ..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="reasoningEffort"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <ReasoningEffortSelector
+                  value={field.value}
+                  onChange={field.onChange}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
