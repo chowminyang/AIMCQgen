@@ -53,9 +53,11 @@ export function PreviewModal({
                   <h3 className="font-semibold text-lg">
                     {index + 1}. {mcq.name}
                   </h3>
-                  <span className="text-sm text-muted-foreground">
-                    Topic: {mcq.topic}
-                  </span>
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <span>Topic: {mcq.topic}</span>
+                    <span>•</span>
+                    <span className="capitalize">Reasoning: {mcq.reasoning_effort || "medium"}</span>
+                  </div>
                 </div>
 
                 {exportType !== 'practice' && (

@@ -28,6 +28,7 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingMCQ, setEditingMCQ] = useState<MCQHistoryItem | null>(null);
   const [currentMCQTopic, setCurrentMCQTopic] = useState<string>("");
+  const [form, setForm] = useState({}); // Added state for the form
 
   const { data: mcqHistory = [] } = useQuery<MCQHistoryItem[]>({
     queryKey: ['/api/mcq/history'],
@@ -141,6 +142,7 @@ export default function Home() {
             correctAnswer: editedMCQ.correctAnswer,
             explanation: editedMCQ.explanation,
           },
+          reasoningEffort: form.reasoningEffort, // Access reasoningEffort from the form state.  Adjust as needed for your form library
         });
 
         toast({

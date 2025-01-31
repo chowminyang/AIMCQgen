@@ -21,6 +21,7 @@ export const mcqs = pgTable("mcqs", {
   rating: integer("rating").default(0),
   model: text("model").notNull().default('o1'),
   reasoning_content: text("reasoning_content"),
+  reasoning_effort: text("reasoning_effort").default("medium"),
 });
 
 // Schema validations using zod
@@ -45,6 +46,7 @@ export const mcqSchema = z.object({
   rating: z.number().min(0).max(5).default(0),
   model: z.enum(["o1"]).default("o1"),
   reasoning_content: z.string().optional(),
+  reasoning_effort: z.enum(["low", "medium", "high"]).default("medium"),
 });
 
 export const insertUserSchema = createInsertSchema(users);
