@@ -143,6 +143,7 @@ export default function Home() {
             explanation: editedMCQ.explanation,
           },
           reasoningEffort: form.reasoningEffort, // Access reasoningEffort from the form state.  Adjust as needed for your form library
+          model: "o3-mini" // Updated model here
         });
 
         toast({
