@@ -44,16 +44,16 @@ Please follow these steps to create the question:
    - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
    - Write the stem clearly and concisely.
    - Include all necessary information within the stem itself.
-   - STRICTLY do not hint / mention / reveal the possible diagnosis or include investigations that immediately give away the answer
+   - STRICTLY do not hint / mention / reveal any possible diagnoses or include investigations that immediately give away the answer
 6. Multiple Choice Options:
    - Provide 5 options in alphabetical order. There needs to be:
-     > One best and correct answer
+     > One best and correct answer, which should have an equal chance of being option A, B, C, D or E
      > One correct answer, but not the best option
      > Three plausible options that might be correct, but are not the best answer
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
    - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
-   - The options are to be STRICTLY sorted in ascending alphabetical order of their starting word.
+   - The options are to be STRICTLY sorted in ascending alphabetical order of their starting word, after "Option X"
 
 7. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
