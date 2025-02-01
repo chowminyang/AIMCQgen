@@ -87,7 +87,7 @@ Return your response in this exact JSON format:
 }`;
 
 // Default model setting
-let currentModel = "o1";
+let currentModel = "o3-mini";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

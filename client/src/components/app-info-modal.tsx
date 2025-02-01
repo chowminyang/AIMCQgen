@@ -78,8 +78,7 @@ export function AppInfoModal() {
                 <div>
                   <h4 className="font-medium">OpenAI Integration:</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Uses o1-mini model by default for generating MCQs</li>
-                    <li>Option to use o1-preview model for enhanced capabilities</li>
+                    <li>Uses o3-mini model for generating MCQs</li>
                     <li>Structured prompt system for consistent output</li>
                   </ul>
                 </div>

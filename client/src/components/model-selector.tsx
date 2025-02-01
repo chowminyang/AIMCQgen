@@ -10,14 +10,14 @@ export function ModelSelector() {
       <Label htmlFor="model-select">AI Model</Label>
       <Select 
         value={currentModel} 
-        onValueChange={(value: "o1") => setModel(value)}
+        onValueChange={(value: "o3-mini") => setModel(value)}
       >
         <SelectTrigger id="model-select" className="w-[200px]">
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="o1" className="flex flex-col items-start">
-            <div className="font-medium">o1</div>
+          <SelectItem value="o3-mini" className="flex flex-col items-start">
+            <div className="font-medium">o3-mini</div>
             <p className="text-xs text-muted-foreground">Advanced reasoning model</p>
           </SelectItem>
         </SelectContent>
