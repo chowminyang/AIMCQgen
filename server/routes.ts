@@ -41,10 +41,10 @@ Please follow these steps to create the question:
    - If a reference file was provided, cite relevant information from it in your explanations.
 
 5. Question Structure:
-   - Ensure the stem focuses on one specific idea or concept.
+   - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
    - Write the stem clearly and concisely.
-   - Include all necessary information and subtle clues within the stem itself.
-   - Avoid overt hints or cues that might lead quickly to the correct answer.
+   - Include all necessary information within the stem itself.
+   - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
 
 Return your response in this exact JSON format:
 
