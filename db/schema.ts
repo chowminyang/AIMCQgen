@@ -19,7 +19,7 @@ export const mcqs = pgTable("mcqs", {
   parsed_content: jsonb("parsed_content").$type<ParsedMCQ>().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   rating: integer("rating").default(0),
-  model: text("model").notNull().default('o3-mini'),
+  model: text("model").notNull().default('o1'),
   reasoning_content: text("reasoning_content"),
   reasoning_effort: text("reasoning_effort").default("medium"),
 });
@@ -44,7 +44,7 @@ export const mcqSchema = z.object({
     explanation: z.string(),
   }),
   rating: z.number().min(0).max(5).default(0),
-  model: z.enum(["o3-mini"]).default("o3-mini"),
+  model: z.enum(["o1"]).default("o1"),
   reasoning_content: z.string().optional(),
   reasoning_effort: z.enum(["low", "medium", "high"]).default("medium"),
 });
