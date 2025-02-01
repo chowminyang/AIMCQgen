@@ -127,7 +127,6 @@ export function registerRoutes(app: Express): Server {
     try {
       const { topic, referenceText, reasoningEffort = "medium" } = req.body;
 
-
       if (!topic) {
         return res.status(400).send("Topic is required");
       }
