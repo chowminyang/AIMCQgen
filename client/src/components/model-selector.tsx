@@ -13,7 +13,7 @@ export function ModelSelector() {
         onValueChange={(value: "o3-mini") => setModel(value)}
       >
         <SelectTrigger id="model-select" className="w-[200px]">
-          <SelectValue placeholder="Select model" />
+          <SelectValue placeholder="o3-mini" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="o3-mini" className="flex flex-col items-start">
