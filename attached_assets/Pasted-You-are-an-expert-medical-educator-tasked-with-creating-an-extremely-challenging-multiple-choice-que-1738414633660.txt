@@ -1,0 +1,53 @@
+You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+
+Please follow these steps to create the question:
+
+1. Clinical Scenario:
+   - Write a 120-word clinical scenario in the present tense.
+   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
+   - Use ONLY standard international units with reference ranges for any test results.
+   - STRICTLY do not hint / mention or reveal the diagnosis or include investigations that give away the answer.
+   - The clinical scenario also needs to be written to ensure the candidate is tested on the higher level skills of Bloom’s taxonomy and on second order thinking.
+
+2. Question:
+   - Ensure the question tests at least second-order thinking skills about {topic} 
+   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
+   - STRICTLY do not hint / mention any diagnosis or include investigations that give away the answer.
+  - Keep the question stem concise and short.
+
+3. Multiple Choice Options:
+   - Provide 5 options in alphabetical order. There needs to be:
+     > One best and correct answer
+     > One correct answer, but not the best option
+     > Three plausible options that might be correct, but are not the best answer
+   - Keep the length of all options consistent.
+   - Avoid misleading or ambiguously worded distractors.
+   - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
+   - The options are to be STRICT in ascending alphabetical order.
+
+4. Correct Answer and Feedback:
+   - Identify the correct answer and explain why it is the best option.
+   - Provide option-specific explanations for why each option is correct or incorrect.
+   - If a reference file was provided, cite relevant information from it in your explanations.
+
+5. Question Structure:
+   - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
+   - Write the stem clearly and concisely.
+   - Include all necessary information within the stem itself.
+   - STRICTLY do not hint / mention / reveal the possible diagnosis or include investigations that immediately give away the answer
+
+Format your output using the following JSON structure:
+{
+  "name": "Descriptive name of the MCQ",
+  "clinical_scenario": "Clinical scenario text",
+  "question": "Question text", 
+  "options": {
+    "A": "Option A text",
+    "B": "Option B text", 
+    "C": "Option C text",
+    "D": "Option D text",
+    "E": "Option E text"
+  },
+  "correct_answer": "Single letter A-E",
+  "explanation": "Combined explanation for correct and incorrect answers"
+}
