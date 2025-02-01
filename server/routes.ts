@@ -61,7 +61,6 @@ Please follow these steps to create the question:
    - Provide option-specific explanations for why each option is correct or incorrect.
 
 Return your response in this exact JSON format:
-
 {
   "name": "Descriptive name of the MCQ",
   "clinical_scenario": "Clinical scenario text",
@@ -131,17 +130,56 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Topic is required");
       }
 
+      const startTime = Date.now();
       const completion = await openai.chat.completions.create({
         model: currentModel,
-        messages: [
-          {
-            role: "developer",
-            content: currentPrompt.replace("{topic}", topic),
-          },
-        ],
-        response_format: { type: "json_object" },
+        messages: [{ 
+          role: "system", 
+          content: `You are an expert medical educator tasked with creating a ${reasoningEffort}-complexity MCQ about ${topic}. Follow these guidelines and provide the response in JSON format:
+
+1. Clinical Scenario:
+   - Write a detailed clinical scenario (~200 words) in present tense
+   - Include: presenting complaint, history (medical, drug, social, sexual), examination findings, parameters, key investigations
+   - Use standard international units with reference ranges
+   - AVOID revealing diagnosis or including obvious investigation results
+
+2. Question Structure:
+   - Test second-order thinking skills about ${topic}
+   - For diagnosis questions: require reaching diagnosis first, then choosing investigations/management
+   - Keep question stem concise and focused
+   - AVOID directly revealing diagnosis
+
+3. Multiple Choice Options:
+   - Provide 5 options in strict alphabetical order
+   - Include: one best answer, one correct but suboptimal answer, three plausible distractors
+   - Keep option lengths consistent
+   - Avoid misleading/ambiguous wording
+
+4. Explanation:
+   - Explain why the correct answer is best
+   - Provide specific reasons why each other option is incorrect
+   ${referenceText ? `\nUse this reference text in your explanations: ${referenceText}` : ''}
+
+Return your response in this exact JSON format:
+{
+  "name": "Descriptive name of the MCQ",
+  "clinical_scenario": "Clinical scenario text",
+  "question": "Question text",
+  "options": {
+    "A": "Option A text",
+    "B": "Option B text",
+    "C": "Option C text",
+    "D": "Option D text",
+    "E": "Option E text"
+  },
+  "correct_answer": "Single letter A-E",
+  "explanation": "Combined explanation for correct and incorrect answers"
+}`
+        }],
+        response_format: { type: "json_object" }
       });
 
+      const generationTime = ((Date.now() - startTime) / 1000).toFixed(2);
       const generatedContent = completion.choices[0].message.content;
       if (!generatedContent) {
         throw new Error("No content generated");
@@ -152,14 +190,24 @@ export function registerRoutes(app: Express): Server {
         name: parsedContent.name,
         model: currentModel,
         reasoningEffort,
+        generationTime: `${generationTime}s`,
+        completionTokens: completion.usage?.completion_tokens || 0,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        totalTokens: completion.usage?.total_tokens || 0
       });
 
       res.json({
         raw: generatedContent,
         parsed: parsedContent,
+        metrics: {
+          generationTime: `${generationTime}s`,
+          completionTokens: completion.usage?.completion_tokens || 0,
+          promptTokens: completion.usage?.prompt_tokens || 0,
+          totalTokens: completion.usage?.total_tokens || 0
+        }
       });
     } catch (error: any) {
-      console.error("MCQ generation error:", error);
+      console.error('MCQ generation error:', error);
       res.status(500).send(error.message || "Failed to generate MCQ");
     }
   });
