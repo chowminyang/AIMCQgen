@@ -26,13 +26,14 @@ Please follow these steps to create the question:
    - Keep the question stem concise and short.
 
 3. Multiple Choice Options:
-   - Provide 5 options in STRICT alphabetical order:
+   - Provide 5 options in alphabetical order. There needs to be:
      > One best and correct answer
      > One correct answer, but not the best option
      > Three plausible options that might be correct, but are not the best answer
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
    - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
+   - The options are to be STRICT in ascending alphabetical order.
 
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
