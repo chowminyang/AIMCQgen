@@ -140,7 +140,7 @@ export function registerRoutes(app: Express): Server {
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [{ 
-          role: "system", 
+          role: "developer", 
           content: currentPrompt.replace('{topic}', topic)
         }],
         response_format: { type: "json_object" }
