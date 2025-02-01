@@ -33,7 +33,7 @@ Please follow these steps to create the question:
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
    - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
-   - The options are to be STRICT in ascending alphabetical order.
+   - The options are to be STRICTLY sorted in ascending alphabetical order of their starting word.
 
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
