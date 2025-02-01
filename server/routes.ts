@@ -8,7 +8,7 @@ import PDFDocument from "pdfkit";
 import XLSX from "xlsx";
 
 // Store the current prompt in memory
-let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy about {topic}
 
 Please follow these steps to create the question:
 
@@ -20,10 +20,11 @@ Please follow these steps to create the question:
    - The clinical scenario also needs to be written to ensure the candidate is tested on the higher level skills of Bloom's taxonomy and on second order thinking.
 
 2. Question:
-   - Ensure the question tests at least second-order thinking skills about {topic} 
+   - Ensure the question tests at least second-order thinking skills
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
    - STRICTLY do not hint / mention any diagnosis or include investigations that give away the answer.
    - Keep the question stem concise and short.
+   - DO NOT summarize the clinical scenario. For e.g. "In this patient with a familial pattern of mild hypercalcemia, which investigation is most appropriate to differentiate benign familial hypercalcemia from other hypercalcemic disorders?" should be "Which investigation is most appropriate to confirm the diagnosis". "In evaluating this patient’s hypercalcemia with a relevant family history, which investigation should be performed next?" should be "In evaluating this patient’s hypercalcemia, which investigation should be performed next?"
 
 3. Multiple Choice Options:
    - Provide 5 options in alphabetical order. There needs to be:
@@ -38,13 +39,13 @@ Please follow these steps to create the question:
 4. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   - If a reference file was provided, cite relevant information from it in your explanations.
 
 5. Question Structure:
    - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
    - Write the stem clearly and concisely.
    - Include all necessary information within the stem itself.
    - STRICTLY do not hint / mention / reveal any possible diagnoses or include investigations that immediately give away the answer
+   
 6. Multiple Choice Options:
    - Provide 5 options in alphabetical order. There needs to be:
      > One best and correct answer, which should have an equal chance of being option A, B, C, D or E
@@ -58,13 +59,6 @@ Please follow these steps to create the question:
 7. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
-   - If a reference file was provided, cite relevant information from it in your explanations.
-
-8. Question Structure:
-   - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
-   - Write the stem clearly and concisely.
-   - Include all necessary information within the stem itself.
-   - STRICTLY do not hint / mention / reveal any possible diagnoses or include investigations that immediately give away the answer.
 
 Return your response in this exact JSON format:
 
@@ -118,7 +112,7 @@ export function registerRoutes(app: Express): Server {
       currentModel = model;
       res.json({ success: true, currentModel });
     } catch (error: any) {
-      console.error('Model selection error:', error);
+      console.error("Model selection error:", error);
       res.status(500).send(error.message || "Failed to update model selection");
     }
   });
@@ -139,11 +133,13 @@ export function registerRoutes(app: Express): Server {
 
       const completion = await openai.chat.completions.create({
         model: currentModel,
-        messages: [{ 
-          role: "developer", 
-          content: currentPrompt.replace('{topic}', topic)
-        }],
-        response_format: { type: "json_object" }
+        messages: [
+          {
+            role: "developer",
+            content: currentPrompt.replace("{topic}", topic),
+          },
+        ],
+        response_format: { type: "json_object" },
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -155,15 +151,15 @@ export function registerRoutes(app: Express): Server {
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
         model: currentModel,
-        reasoningEffort
+        reasoningEffort,
       });
 
       res.json({
         raw: generatedContent,
-        parsed: parsedContent
+        parsed: parsedContent,
       });
     } catch (error: any) {
-      console.error('MCQ generation error:', error);
+      console.error("MCQ generation error:", error);
       res.status(500).send(error.message || "Failed to generate MCQ");
     }
   });
@@ -171,24 +167,28 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { name, topic, rawContent, parsedContent, model, reasoningEffort } = req.body;
+      const { name, topic, rawContent, parsedContent, model, reasoningEffort } =
+        req.body;
 
-      if (!parsedContent || !name || name.trim() === '') {
+      if (!parsedContent || !name || name.trim() === "") {
         return res.status(400).send("MCQ name is required");
       }
 
-      const [newMcq] = await db.insert(mcqs).values({
-        name: name.trim(),
-        topic: topic.trim(),
-        raw_content: rawContent,
-        parsed_content: parsedContent,
-        model: model || "o1",
-        reasoning_effort: reasoningEffort || "medium",
-      }).returning();
+      const [newMcq] = await db
+        .insert(mcqs)
+        .values({
+          name: name.trim(),
+          topic: topic.trim(),
+          raw_content: rawContent,
+          parsed_content: parsedContent,
+          model: model || "o1",
+          reasoning_effort: reasoningEffort || "medium",
+        })
+        .returning();
 
       res.json(newMcq);
     } catch (error: any) {
-      console.error('Save MCQ error:', error);
+      console.error("Save MCQ error:", error);
       res.status(500).send(error.message || "Failed to save MCQ");
     }
   });
@@ -196,12 +196,19 @@ export function registerRoutes(app: Express): Server {
   // Get MCQ history endpoint
   app.get("/api/mcq/history", async (_req, res) => {
     try {
-      console.log('Fetching MCQ history...');
-      const mcqHistory = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
-      console.log('MCQ history fetched successfully:', mcqHistory.length, 'items');
+      console.log("Fetching MCQ history...");
+      const mcqHistory = await db
+        .select()
+        .from(mcqs)
+        .orderBy(desc(mcqs.created_at));
+      console.log(
+        "MCQ history fetched successfully:",
+        mcqHistory.length,
+        "items",
+      );
       res.json(mcqHistory);
     } catch (error: any) {
-      console.error('MCQ history error:', error);
+      console.error("MCQ history error:", error);
       res.status(500).send(error.message || "Failed to fetch MCQ history");
     }
   });
@@ -217,7 +224,7 @@ export function registerRoutes(app: Express): Server {
       await db.delete(mcqs).where(eq(mcqs.id, mcqId));
       res.status(200).send("MCQ deleted successfully");
     } catch (error: any) {
-      console.error('Delete MCQ error:', error);
+      console.error("Delete MCQ error:", error);
       res.status(500).send(error.message || "Failed to delete MCQ");
     }
   });
@@ -243,7 +250,7 @@ export function registerRoutes(app: Express): Server {
 
       res.json(updatedMcq);
     } catch (error: any) {
-      console.error('Update MCQ error:', error);
+      console.error("Update MCQ error:", error);
       res.status(500).send(error.message || "Failed to update MCQ");
     }
   });
@@ -251,29 +258,27 @@ export function registerRoutes(app: Express): Server {
   // Rate MCQ endpoint
   app.post("/api/mcq/:id/rate", async (req, res) => {
     try {
-      console.log('Rating MCQ...');
+      console.log("Rating MCQ...");
       const mcqId = parseInt(req.params.id);
       const { rating } = req.body;
 
       if (isNaN(mcqId)) {
-        console.error('Invalid MCQ ID:', req.params.id);
+        console.error("Invalid MCQ ID:", req.params.id);
         return res.status(400).send("Invalid MCQ ID");
       }
 
-      if (typeof rating !== 'number' || rating < 0 || rating > 5) {
-        console.error('Invalid rating value:', rating);
+      if (typeof rating !== "number" || rating < 0 || rating > 5) {
+        console.error("Invalid rating value:", rating);
         return res.status(400).send("Rating must be a number between 0 and 5");
       }
 
       console.log(`Updating MCQ ${mcqId} with rating ${rating}`);
-      await db.update(mcqs)
-        .set({ rating })
-        .where(eq(mcqs.id, mcqId));
+      await db.update(mcqs).set({ rating }).where(eq(mcqs.id, mcqId));
 
-      console.log('Rating updated successfully');
+      console.log("Rating updated successfully");
       res.json({ success: true });
     } catch (error: any) {
-      console.error('Update rating error:', error);
+      console.error("Update rating error:", error);
       res.status(500).send(error.message || "Failed to update rating");
     }
   });
@@ -287,13 +292,13 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/prompt", (req, res) => {
     try {
       const { prompt } = req.body;
-      if (typeof prompt !== 'string' || !prompt.trim()) {
+      if (typeof prompt !== "string" || !prompt.trim()) {
         return res.status(400).send("Prompt is required");
       }
       currentPrompt = prompt.trim();
       res.json({ success: true });
     } catch (error: any) {
-      console.error('Update prompt error:', error);
+      console.error("Update prompt error:", error);
       res.status(500).send(error.message || "Failed to update prompt");
     }
   });
@@ -305,32 +310,33 @@ export function registerRoutes(app: Express): Server {
       let mcqData;
 
       if (ids) {
-        const mcqIds = (ids as string).split(',').map(Number);
-        mcqData = await db.select().from(mcqs)
+        const mcqIds = (ids as string).split(",").map(Number);
+        mcqData = await db
+          .select()
+          .from(mcqs)
           .where(inArray(mcqs.id, mcqIds))
           .orderBy(desc(mcqs.created_at));
       } else {
-        mcqData = await db.select().from(mcqs)
-          .orderBy(desc(mcqs.created_at));
+        mcqData = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
       }
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
-      const ws_data = mcqData.map(mcq => ({
-        'Name': mcq.name,
-        'Topic': mcq.topic,
-        'Model': mcq.model || 'o1',
-        'Clinical Scenario': mcq.parsed_content.clinicalScenario,
-        'Question': mcq.parsed_content.question,
-        'Option A': mcq.parsed_content.options.A,
-        'Option B': mcq.parsed_content.options.B,
-        'Option C': mcq.parsed_content.options.C,
-        'Option D': mcq.parsed_content.options.D,
-        'Option E': mcq.parsed_content.options.E,
-        'Correct Answer': mcq.parsed_content.correctAnswer,
-        'Explanation': mcq.parsed_content.explanation,
-        'Rating': mcq.rating || 0,
-        'Created At': new Date(mcq.created_at).toLocaleString(),
+      const ws_data = mcqData.map((mcq) => ({
+        Name: mcq.name,
+        Topic: mcq.topic,
+        Model: mcq.model || "o1",
+        "Clinical Scenario": mcq.parsed_content.clinicalScenario,
+        Question: mcq.parsed_content.question,
+        "Option A": mcq.parsed_content.options.A,
+        "Option B": mcq.parsed_content.options.B,
+        "Option C": mcq.parsed_content.options.C,
+        "Option D": mcq.parsed_content.options.D,
+        "Option E": mcq.parsed_content.options.E,
+        "Correct Answer": mcq.parsed_content.correctAnswer,
+        Explanation: mcq.parsed_content.explanation,
+        Rating: mcq.rating || 0,
+        "Created At": new Date(mcq.created_at).toLocaleString(),
       }));
 
       const ws = XLSX.utils.json_to_sheet(ws_data);
@@ -352,24 +358,29 @@ export function registerRoutes(app: Express): Server {
         { wch: 10 }, // Rating
         { wch: 20 }, // Created At
       ];
-      ws['!cols'] = colWidths;
+      ws["!cols"] = colWidths;
 
       XLSX.utils.book_append_sheet(wb, ws, "MCQs");
 
       // Generate buffer with proper encoding
-      const excelBuffer = XLSX.write(wb, { 
-        type: 'buffer', 
-        bookType: 'xlsx',
+      const excelBuffer = XLSX.write(wb, {
+        type: "buffer",
+        bookType: "xlsx",
         bookSST: false,
-        compression: true
+        compression: true,
       });
 
-      res.setHeader('Content-Disposition', 'attachment; filename=mcq-export.xlsx');
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=mcq-export.xlsx",
+      );
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
       res.end(excelBuffer);
-
     } catch (error: any) {
-      console.error('XLSX export error:', error);
+      console.error("XLSX export error:", error);
       res.status(500).send(error.message || "Failed to export to XLSX");
     }
   });
@@ -381,94 +392,129 @@ export function registerRoutes(app: Express): Server {
       let mcqData;
 
       if (ids) {
-        const mcqIds = (ids as string).split(',').map(Number);
-        mcqData = await db.select().from(mcqs)
+        const mcqIds = (ids as string).split(",").map(Number);
+        mcqData = await db
+          .select()
+          .from(mcqs)
           .where(inArray(mcqs.id, mcqIds))
           .orderBy(desc(mcqs.created_at));
       } else {
-        mcqData = await db.select().from(mcqs)
-          .orderBy(desc(mcqs.created_at));
+        mcqData = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
       }
 
       // Create PDF document with better formatting
       const doc = new PDFDocument({
         margin: 50,
-        size: 'A4',
+        size: "A4",
         bufferPages: true,
         autoFirstPage: true,
         info: {
-          Title: 'MCQ Export',
-          Author: 'MCQ Generator',
-          Subject: 'Medical MCQ Questions',
-          Keywords: 'mcq, medical, questions',
-          CreationDate: new Date()
-        }
+          Title: "MCQ Export",
+          Author: "MCQ Generator",
+          Subject: "Medical MCQ Questions",
+          Keywords: "mcq, medical, questions",
+          CreationDate: new Date(),
+        },
       });
 
       // Create a write stream buffer
       const chunks: any[] = [];
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => {
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => {
         const pdfBuffer = Buffer.concat(chunks);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=mcq-export.pdf');
-        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=mcq-export.pdf",
+        );
+        res.setHeader("Content-Length", pdfBuffer.length);
         res.end(pdfBuffer);
       });
 
       // Add content with improved formatting
-      doc.font('Helvetica-Bold').fontSize(24).text('MCQ Export', { align: 'center' });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(24)
+        .text("MCQ Export", { align: "center" });
       doc.moveDown(2);
 
       mcqData.forEach((mcq, index) => {
         // Add MCQ number and name
-        doc.font('Helvetica-Bold').fontSize(16)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(16)
           .text(`${index + 1}. ${mcq.name}`, { underline: true });
 
-        doc.font('Helvetica').fontSize(12)
-          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || 'o1'}`, { color: 'grey' });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || "o1"}`, {
+            color: "grey",
+          });
         doc.moveDown();
 
         // Clinical Scenario
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Clinical Scenario:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
-          .text(mcq.parsed_content.clinicalScenario, { align: 'justify' });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Clinical Scenario:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(mcq.parsed_content.clinicalScenario, { align: "justify" });
         doc.moveDown();
 
         // Question
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Question:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
-          .text(mcq.parsed_content.question, { align: 'justify' });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Question:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(mcq.parsed_content.question, { align: "justify" });
         doc.moveDown();
 
         // Options
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Options:', { underline: true });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Options:", { underline: true });
         Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.font('Helvetica').fontSize(12)
+          doc
+            .font("Helvetica")
+            .fontSize(12)
             .text(`${letter}) ${text}`, { indent: 20 });
         });
         doc.moveDown();
 
         // Correct Answer
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Correct Answer:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Correct Answer:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
           .text(`Option ${mcq.parsed_content.correctAnswer}`);
         doc.moveDown();
 
         // Explanation
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Explanation:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
-          .text(mcq.parsed_content.explanation, { align: 'justify' });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Explanation:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(mcq.parsed_content.explanation, { align: "justify" });
         doc.moveDown();
 
         // Rating
-        doc.font('Helvetica').fontSize(10)
-          .text(`Rating: ${mcq.rating || 0} stars`, { color: 'grey' });
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .text(`Rating: ${mcq.rating || 0} stars`, { color: "grey" });
 
         // Add a page break between MCQs
         if (index < mcqData.length - 1) {
@@ -478,9 +524,8 @@ export function registerRoutes(app: Express): Server {
 
       // Finalize PDF
       doc.end();
-
     } catch (error: any) {
-      console.error('PDF export error:', error);
+      console.error("PDF export error:", error);
       res.status(500).send(error.message || "Failed to export to PDF");
     }
   });
@@ -492,81 +537,102 @@ export function registerRoutes(app: Express): Server {
       let mcqData;
 
       if (ids) {
-        const mcqIds = (ids as string).split(',').map(Number);
-        mcqData = await db.select().from(mcqs)
+        const mcqIds = (ids as string).split(",").map(Number);
+        mcqData = await db
+          .select()
+          .from(mcqs)
           .where(inArray(mcqs.id, mcqIds))
           .orderBy(desc(mcqs.created_at));
       } else {
-        mcqData = await db.select().from(mcqs)
-          .orderBy(desc(mcqs.created_at));
+        mcqData = await db.select().from(mcqs).orderBy(desc(mcqs.created_at));
       }
 
       // Create PDF document with better formatting
       const doc = new PDFDocument({
         margin: 50,
-        size: 'A4',
+        size: "A4",
         bufferPages: true,
         autoFirstPage: true,
         info: {
-          Title: 'MCQ Practice Set',
-          Author: 'MCQ Generator',
-          Subject: 'Medical MCQ Practice Questions',
-          Keywords: 'mcq, medical, practice, questions',
-          CreationDate: new Date()
-        }
+          Title: "MCQ Practice Set",
+          Author: "MCQ Generator",
+          Subject: "Medical MCQ Practice Questions",
+          Keywords: "mcq, medical, practice, questions",
+          CreationDate: new Date(),
+        },
       });
 
       // Create a write stream buffer
       const chunks: any[] = [];
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => {
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => {
         const pdfBuffer = Buffer.concat(chunks);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=mcq-practice.pdf');
-        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=mcq-practice.pdf",
+        );
+        res.setHeader("Content-Length", pdfBuffer.length);
         res.end(pdfBuffer);
       });
 
       // Add content
-      doc.font('Helvetica-Bold').fontSize(24)
-        .text('MCQ Practice Set', { align: 'center' });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(24)
+        .text("MCQ Practice Set", { align: "center" });
       doc.moveDown(2);
 
       mcqData.forEach((mcq, index) => {
         // Add MCQ number and name
-        doc.font('Helvetica-Bold').fontSize(16)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(16)
           .text(`${index + 1}. ${mcq.name}`, { underline: true });
 
-        doc.font('Helvetica').fontSize(12)
-          .text(`Topic: ${mcq.topic}`, { color: 'grey' });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(`Topic: ${mcq.topic}`, { color: "grey" });
         doc.moveDown();
 
         // Clinical Scenario
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Clinical Scenario:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
-          .text(mcq.parsed_content.clinicalScenario, { align: 'justify' });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Clinical Scenario:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(mcq.parsed_content.clinicalScenario, { align: "justify" });
         doc.moveDown();
 
         // Question
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Question:', { underline: true });
-        doc.font('Helvetica').fontSize(12)
-          .text(mcq.parsed_content.question, { align: 'justify' });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Question:", { underline: true });
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .text(mcq.parsed_content.question, { align: "justify" });
         doc.moveDown();
 
         // Options
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Options:', { underline: true });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Options:", { underline: true });
         Object.entries(mcq.parsed_content.options).forEach(([letter, text]) => {
-          doc.font('Helvetica').fontSize(12)
+          doc
+            .font("Helvetica")
+            .fontSize(12)
             .text(`${letter}) ${text}`, { indent: 20 });
         });
         doc.moveDown();
 
         // Answer space
-        doc.font('Helvetica-Bold').fontSize(14)
-          .text('Your Answer: _____');
+        doc.font("Helvetica-Bold").fontSize(14).text("Your Answer: _____");
         doc.moveDown();
 
         if (index < mcqData.length - 1) {
@@ -576,8 +642,10 @@ export function registerRoutes(app: Express): Server {
 
       // Add answer sheet at the end
       doc.addPage();
-      doc.font('Helvetica-Bold').fontSize(20)
-        .text('Answer Sheet', { align: 'center' });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(20)
+        .text("Answer Sheet", { align: "center" });
       doc.moveDown();
 
       // Create a grid for answers
@@ -586,20 +654,21 @@ export function registerRoutes(app: Express): Server {
 
       for (let row = 0; row < rows; row++) {
         const answers = mcqData.slice(row * columns, (row + 1) * columns);
-        const line = answers.map((mcq, idx) => {
-          const num = row * columns + idx + 1;
-          return `${num}. ${mcq.parsed_content.correctAnswer}`.padEnd(15);
-        }).join('  ');
+        const line = answers
+          .map((mcq, idx) => {
+            const num = row * columns + idx + 1;
+            return `${num}. ${mcq.parsed_content.correctAnswer}`.padEnd(15);
+          })
+          .join("  ");
 
-        doc.font('Helvetica').fontSize(12).text(line);
+        doc.font("Helvetica").fontSize(12).text(line);
         doc.moveDown(0.5);
       }
 
       // Finalize PDF
       doc.end();
-
     } catch (error: any) {
-      console.error('PDF export error:', error);
+      console.error("PDF export error:", error);
       res.status(500).send(error.message || "Failed to export to PDF");
     }
   });
@@ -627,13 +696,14 @@ export function registerRoutes(app: Express): Server {
 
       res.json({ text: rewrittenText });
     } catch (error: any) {
-      console.error('Clinical scenario rewrite error:', error);
-      res.status(500).send(error.message || "Failed to rewrite clinical scenario");
+      console.error("Clinical scenario rewrite error:", error);
+      res
+        .status(500)
+        .send(error.message || "Failed to rewrite clinical scenario");
     }
   });
 
-
   const httpServer = createServer(app);
-  console.log('Routes registered successfully');
+  console.log("Routes registered successfully");
   return httpServer;
 }
