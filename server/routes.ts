@@ -7,68 +7,10 @@ import OpenAI from "openai";
 import PDFDocument from "pdfkit";
 import XLSX from "xlsx";
 
-// Store the current prompt in memory
-let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
-
-Please follow these steps to create the question:
-
-1. Clinical Scenario:
-   - Write a 120-word clinical scenario in the present tense.
-   - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
-   - Use ONLY standard international units with reference ranges for any test results.
-   - STRICTLY do not hint / mention or reveal the diagnosis or include investigations that give away the answer.
-   - The clinical scenario also needs to be written to ensure the candidate is tested on the higher level skills of Bloom's taxonomy and on second order thinking.
-
-2. Question:
-   - Ensure the question tests at least second-order thinking skills about {topic} 
-   - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-   - STRICTLY do not hint / mention any diagnosis or include investigations that give away the answer.
-   - Keep the question stem concise and short.
-
-3. Multiple Choice Options:
-   - Provide 5 options in alphabetical order. There needs to be:
-     > One best and correct answer
-     > One correct answer, but not the best option
-     > Three plausible options that might be correct, but are not the best answer
-   - Keep the length of all options consistent.
-   - Avoid misleading or ambiguously worded distractors.
-   - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
-   - The options are to be STRICTLY sorted in ascending alphabetical order of their starting word.
-
-4. Correct Answer and Feedback:
-   - Identify the correct answer and explain why it is the best option.
-   - Provide option-specific explanations for why each option is correct or incorrect.
-   - If a reference file was provided, cite relevant information from it in your explanations.
-
-5. Question Structure:
-   - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
-   - Write the stem clearly and concisely.
-   - Include all necessary information within the stem itself.
-   - STRICTLY do not hint / mention / reveal any part of the diagnosis or include investigations that immediately give away the answer.
-
-Return your response in this exact JSON format:
-
-{
-  "name": "Descriptive name of the MCQ",
-  "clinical_scenario": "Clinical scenario text",
-  "question": "Question text",
-  "options": {
-    "A": "Option A text",
-    "B": "Option B text",
-    "C": "Option C text",
-    "D": "Option D text",
-    "E": "Option E text"
-  },
-  "correct_answer": "Single letter A-E",
-  "explanation": "Combined explanation for correct and incorrect answers"
-}`;
-
 // Default model setting
 let currentModel = "o3-mini";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI();
 
 function parseGeneratedContent(content: string) {
   try {
@@ -92,7 +34,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/settings/model", (req, res) => {
     try {
       const { model } = req.body;
-      if (model !== "o1") {
+      if (model !== "o3-mini") {
         return res.status(400).send("Invalid model selection");
       }
       currentModel = model;
@@ -117,19 +59,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Topic is required");
       }
 
-      // Replace the topic placeholder in the prompt
-      const prompt = currentPrompt
-        .replace(/\{topic\}/g, topic)
-        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
-
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [{ 
-          role: "developer", 
-          content: prompt 
+          role: "system", 
+          content: `You are an expert medical educator. Generate a challenging MCQ about ${topic}.${
+            referenceText ? `\nUse this reference text: ${referenceText}` : ''
+          }` 
         }],
-        response_format: { type: "json_object" },
-        reasoning_effort: reasoningEffort
+        temperature: reasoningEffort === "high" ? 0.9 : reasoningEffort === "medium" ? 0.7 : 0.5
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -140,8 +78,6 @@ export function registerRoutes(app: Express): Server {
       const parsedContent = parseGeneratedContent(generatedContent);
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
-        correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length,
         model: currentModel,
         reasoningEffort
       });
@@ -159,22 +95,22 @@ export function registerRoutes(app: Express): Server {
   // Save MCQ endpoint
   app.post("/api/mcq/save", async (req, res) => {
     try {
-      const { name, topic, rawContent, parsedContent, model, reasoningEffort } = req.body;
+      const { name, topic, rawContent, parsedContent, reasoningEffort } = req.body;
 
       if (!parsedContent || !name || name.trim() === '') {
         return res.status(400).send("MCQ name is required");
       }
 
-      const [newMcq] = await db.insert(mcqs).values({
+      const newMcq = await db.insert(mcqs).values({
         name: name.trim(),
         topic: topic.trim(),
         raw_content: rawContent,
         parsed_content: parsedContent,
-        model: model || "o1", 
+        model: currentModel,
         reasoning_effort: reasoningEffort || "medium",
       }).returning();
 
-      res.json(newMcq);
+      res.json(newMcq[0]);
     } catch (error: any) {
       console.error('Save MCQ error:', error);
       res.status(500).send(error.message || "Failed to save MCQ");
@@ -578,49 +514,38 @@ export function registerRoutes(app: Express): Server {
           const num = row * columns + idx + 1;
           return `${num}. ${mcq.parsed_content.correctAnswer}`.padEnd(15);
         }).join('  ');
-
         doc.font('Helvetica').fontSize(12).text(line);
         doc.moveDown(0.5);
       }
-
       // Finalize PDF
       doc.end();
-
     } catch (error: any) {
       console.error('PDF export error:', error);
       res.status(500).send(error.message || "Failed to export to PDF");
     }
   });
-
   // Rewrite clinical scenario endpoint
   app.post("/api/mcq/rewrite-scenario", async (req, res) => {
     try {
       const { text } = req.body;
-
       if (!text) {
         return res.status(400).send("Clinical scenario text is required");
       }
-
       const prompt = `Please rewrite the following clinical scenario to be clear, concise, and grammatically correct while maintaining all medical details and information:\n\n${text}`;
-
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
       });
-
       const rewrittenText = completion.choices[0].message.content;
       if (!rewrittenText) {
         throw new Error("No content generated");
       }
-
       res.json({ text: rewrittenText });
     } catch (error: any) {
       console.error('Clinical scenario rewrite error:', error);
       res.status(500).send(error.message || "Failed to rewrite clinical scenario");
     }
   });
-
-
   const httpServer = createServer(app);
   console.log('Routes registered successfully');
   return httpServer;
