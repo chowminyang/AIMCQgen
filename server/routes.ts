@@ -45,8 +45,7 @@ Please follow these steps to create the question:
    - Write the stem clearly and concisely.
    - Include all necessary information within the stem itself.
    - STRICTLY do not hint / mention / reveal the possible diagnosis or include investigations that immediately give away the answer
-
-3. Multiple Choice Options:
+6. Multiple Choice Options:
    - Provide 5 options in alphabetical order. There needs to be:
      > One best and correct answer
      > One correct answer, but not the best option
@@ -56,12 +55,12 @@ Please follow these steps to create the question:
    - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
    - The options are to be STRICTLY sorted in ascending alphabetical order of their starting word.
 
-4. Correct Answer and Feedback:
+7. Correct Answer and Feedback:
    - Identify the correct answer and explain why it is the best option.
    - Provide option-specific explanations for why each option is correct or incorrect.
    - If a reference file was provided, cite relevant information from it in your explanations.
 
-5. Question Structure:
+8. Question Structure:
    - Ensure the stem focuses on one specific idea or concept without blowing the cover of the second order intention.
    - Write the stem clearly and concisely.
    - Include all necessary information within the stem itself.
@@ -142,7 +141,32 @@ export function registerRoutes(app: Express): Server {
         model: currentModel,
         messages: [{ 
           role: "system", 
-          content: `You are an expert medical educator tasked with creating a ${reasoningEffort}-complexity MCQ about ${topic}. Return your response in JSON format with the following structure:
+          content: `You are an expert medical educator tasked with creating a ${reasoningEffort}-complexity MCQ about ${topic}. Follow these guidelines and provide the response in JSON format:
+
+1. Clinical Scenario:
+   - Write a detailed clinical scenario (~200 words) in present tense
+   - Include: presenting complaint, history (medical, drug, social, sexual), examination findings, parameters, key investigations
+   - Use standard international units with reference ranges
+   - AVOID revealing diagnosis or including obvious investigation results
+
+2. Question Structure:
+   - Test second-order thinking skills about ${topic}
+   - For diagnosis questions: require reaching diagnosis first, then choosing investigations/management
+   - Keep question stem concise and focused
+   - AVOID directly revealing diagnosis
+
+3. Multiple Choice Options:
+   - Provide 5 options in strict alphabetical order
+   - Include: one best answer, one correct but suboptimal answer, three plausible distractors
+   - Keep option lengths consistent
+   - Avoid misleading/ambiguous wording
+
+4. Explanation:
+   - Explain why the correct answer is best
+   - Provide specific reasons why each other option is incorrect
+   ${referenceText ? `\nUse this reference text in your explanations: ${referenceText}` : ''}
+
+Return your response in this exact JSON format:
 {
   "name": "Descriptive name of the MCQ",
   "clinical_scenario": "Clinical scenario text",
@@ -156,8 +180,7 @@ export function registerRoutes(app: Express): Server {
   },
   "correct_answer": "Single letter A-E",
   "explanation": "Combined explanation for correct and incorrect answers"
-}
-${referenceText ? `\nUse this reference text in your explanations: ${referenceText}` : ''}`
+}`
         }],
         response_format: { type: "json_object" }
       });
