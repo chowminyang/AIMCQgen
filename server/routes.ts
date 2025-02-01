@@ -112,40 +112,34 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/mcq/generate", async (req, res) => {
     try {
       const { topic, referenceText, reasoningEffort = "medium" } = req.body;
-
+  
       if (!topic) {
         return res.status(400).send("Topic is required");
       }
-
-      // Replace the topic placeholder in the prompt
-      const prompt = currentPrompt
-        .replace(/\{topic\}/g, topic)
-        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
-
+  
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [{ 
-          role: "developer", 
-          content: prompt 
+          role: "system", 
+          content: `You are an expert medical educator tasked with creating a ${reasoningEffort}-complexity MCQ about ${topic}.${
+            referenceText ? `\nUse this reference text: ${referenceText}` : ''
+          }` 
         }],
-        response_format: { type: "json_object" },
-        reasoning_effort: reasoningEffort
+        response_format: { type: "json_object" }
       });
-
+  
       const generatedContent = completion.choices[0].message.content;
       if (!generatedContent) {
         throw new Error("No content generated");
       }
-
+  
       const parsedContent = parseGeneratedContent(generatedContent);
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
-        correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length,
         model: currentModel,
         reasoningEffort
       });
-
+  
       res.json({
         raw: generatedContent,
         parsed: parsedContent
