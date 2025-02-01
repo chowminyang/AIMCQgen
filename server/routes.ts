@@ -132,12 +132,17 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Topic is required");
       }
 
+      let promptContent = currentPrompt.replace("{topic}", topic);
+      if (referenceText) {
+        promptContent += `\n\nReference Material:\n${referenceText}`;
+      }
+
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [
           {
             role: "developer",
-            content: currentPrompt.replace("{topic}", topic),
+            content: promptContent,
           },
         ],
         response_format: { type: "json_object" },
