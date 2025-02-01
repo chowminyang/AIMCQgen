@@ -117,19 +117,28 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("Topic is required");
       }
 
-      // Replace the topic placeholder in the prompt
-      const prompt = currentPrompt
-        .replace(/\{topic\}/g, topic)
-        .replace(/\{referenceText\}/, referenceText ? `\n   Use this reference text in your explanations where relevant: ${referenceText}` : '');
-
       const completion = await openai.chat.completions.create({
         model: currentModel,
         messages: [{ 
-          role: "developer", 
-          content: prompt 
+          role: "system", 
+          content: `You are an expert medical educator tasked with creating a ${reasoningEffort}-complexity MCQ about ${topic}. Return your response in JSON format with the following structure:
+{
+  "name": "Descriptive name of the MCQ",
+  "clinical_scenario": "Clinical scenario text",
+  "question": "Question text",
+  "options": {
+    "A": "Option A text",
+    "B": "Option B text",
+    "C": "Option C text",
+    "D": "Option D text",
+    "E": "Option E text"
+  },
+  "correct_answer": "Single letter A-E",
+  "explanation": "Combined explanation for correct and incorrect answers"
+}
+${referenceText ? `\nUse this reference text in your explanations: ${referenceText}` : ''}`
         }],
-        response_format: { type: "json_object" },
-        reasoning_effort: reasoningEffort
+        response_format: { type: "json_object" }
       });
 
       const generatedContent = completion.choices[0].message.content;
@@ -140,8 +149,6 @@ export function registerRoutes(app: Express): Server {
       const parsedContent = parseGeneratedContent(generatedContent);
       console.log("Generated and parsed MCQ:", {
         name: parsedContent.name,
-        correctAnswer: parsedContent.correctAnswer,
-        optionsCount: Object.keys(parsedContent.options).length,
         model: currentModel,
         reasoningEffort
       });
@@ -170,7 +177,7 @@ export function registerRoutes(app: Express): Server {
         topic: topic.trim(),
         raw_content: rawContent,
         parsed_content: parsedContent,
-        model: model || "o1", 
+        model: model || "o1",
         reasoning_effort: reasoningEffort || "medium",
       }).returning();
 
