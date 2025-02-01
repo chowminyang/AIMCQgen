@@ -8,33 +8,65 @@ import PDFDocument from "pdfkit";
 import XLSX from "xlsx";
 
 // Store the current prompt in memory
-let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists about "{topic}". Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
+let currentPrompt = `You are an expert medical educator tasked with creating an extremely challenging multiple-choice question for medical specialists. Your goal is to test second-order thinking, emphasizing the application, analysis, and evaluation of knowledge based on Bloom's taxonomy.
 
 Please follow these steps to create the question:
 
 1. Clinical Scenario:
-   - Write a clinical scenario in the present tense (maximum 120 words).
+   - Write a 120-word clinical scenario in the present tense.
    - Include relevant details such as presenting complaint, history, past medical history, drug history, social history, sexual history, physical examination findings, bedside parameters, and necessary investigations.
    - Use ONLY standard international units with reference ranges for any test results.
-   - Do not reveal the diagnosis or include investigations that immediately give away the answer.
+   - STRICTLY do not hint / mention or reveal the diagnosis or include investigations that give away the answer.
+   - The clinical scenario also needs to be written to ensure the candidate is tested on the higher level skills of Bloom's taxonomy and on second order thinking.
 
 2. Question:
-   - Test second-order thinking skills about {topic}.
+   - Ensure the question tests at least second-order thinking skills about {topic} 
    - For example, for a question that tests the learner's ability to reach a diagnosis, formulate a question that requires the individual to first come to a diagnosis but then give options to choose the right investigation or management plans.
-   - Do not reveal or hint at the diagnosis in the question.
-   - Avoid including obvious investigations or management options that would immediately give away the answer.
+   - STRICTLY do not hint / mention any diagnosis or include investigations that give away the answer.
+   - Keep the question stem concise and short.
 
 3. Multiple Choice Options:
-   - Provide 5 options (A-E) in STRICTLY alphabetical order:
+   - Provide 5 options in alphabetical order:
      a) One best and correct answer
      b) One correct answer, but not the best option
      c-e) Plausible options that might be correct, but are not the best answer
-   - All options must be sorted alphabetically regardless of which is correct
    - Keep the length of all options consistent.
    - Avoid misleading or ambiguously worded distractors.
+   - STRICTLY do not hint / mention / reveal the diagnosis or include investigations that immediately give away the answer.
 
-4. Correct Answer and Explanation:
-   - Provide a detailed explanation of why the correct answer is best and why each other option is incorrect.
+4. Correct Answer and Feedback:
+   - Identify the correct answer and explain why it is the best option.
+   - Provide option-specific explanations for why each option is correct or incorrect.
+   - If a reference file was provided, cite relevant information from it in your explanations.
+
+5. Question Structure:
+   - Ensure the stem focuses on one specific idea or concept.
+   - Write the stem clearly and concisely.
+   - Include all necessary information and subtle clues within the stem itself.
+   - Avoid overt hints or cues that might lead quickly to the correct answer.
+
+Format your output using the following structure:
+
+Clinical Scenario:
+[Your 120-word clinical scenario]
+
+Question:
+[Your second-order thinking question]
+
+Options:
+
+A. [Option A]
+B. [Option B]
+C. [Option C]
+D. [Option D]
+E. [Option E]
+
+Correct Answer: [Letter of correct option]
+
+Feedback:
+[Explanation of why the correct answer is best, and option-specific explanations for all choices]
+
+Remember to provide line spacing between each section for clarity.
 {referenceText}
 
 Return your response in this exact JSON format:
