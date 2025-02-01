@@ -46,30 +46,6 @@ Please follow these steps to create the question:
    - Include all necessary information and subtle clues within the stem itself.
    - Avoid overt hints or cues that might lead quickly to the correct answer.
 
-Format your output using the following structure:
-
-Clinical Scenario:
-[Your 120-word clinical scenario]
-
-Question:
-[Your second-order thinking question]
-
-Options:
-
-A. [Option A]
-B. [Option B]
-C. [Option C]
-D. [Option D]
-E. [Option E]
-
-Correct Answer: [Letter of correct option]
-
-Feedback:
-[Explanation of why the correct answer is best, and option-specific explanations for all choices]
-
-Remember to provide line spacing between each section for clarity.
-{referenceText}
-
 Return your response in this exact JSON format:
 
 {
