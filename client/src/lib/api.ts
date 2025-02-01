@@ -11,7 +11,10 @@ export async function generateMCQ(data: MCQFormData): Promise<MCQResponse> {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      reasoning_effort: data.reasoningEffort
+    }),
   });
 
   if (!response.ok) {
