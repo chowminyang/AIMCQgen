@@ -1,8 +1,8 @@
-Welcome to MCQ Generator!
+**Welcome to MCQ Generator!**
 What is this app?
 The MCQ Generator is an advanced AI-powered tool designed specifically for medical education. It leverages cutting-edge AI technology to create high-quality, clinically relevant multiple-choice questions that test second-order thinking skills. Perfect for medical educators, exam preparers, and healthcare professionals who need to create challenging yet fair assessment materials.
 
-How to Use
+**How to Use**
 1. Generate Questions
 Select Topic:
 Enter a specific medical topic (e.g., "Beta-blockers in heart failure")
@@ -60,7 +60,8 @@ Quality Assurance:
 Built-in formatting and style checks
 Standard units and reference ranges
 Consistent question structure
-Best Practices for Quality MCQs
+
+**Best Practices for Quality MCQs**
 Start with specific, well-defined topics
 Include relevant clinical guidelines in reference text
 Review and rate questions regularly
