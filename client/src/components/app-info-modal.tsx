@@ -6,7 +6,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function AppInfoModal() {
@@ -14,116 +14,92 @@ export function AppInfoModal() {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <Info className="h-4 w-4" />
-          About This App
+          <HelpCircle className="h-4 w-4" />
+          Help & Guide
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Application Structure</DialogTitle>
+          <DialogTitle>Welcome to MCQ Generator!</DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh]">
           <div className="space-y-6 pr-6">
-            {/* Frontend Section */}
+            {/* What is this app? */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Frontend (React + TypeScript)</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Located in /client/src</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Uses React with TypeScript for type safety</li>
-                  <li>UI components built with Shadcn/UI (customizable React components)</li>
-                  <li>State management using React Query for API data fetching/caching</li>
-                  <li>Styling with Tailwind CSS</li>
-                  <li>Routing with Wouter (lightweight router)</li>
-                </ul>
-              </div>
+              <h3 className="text-lg font-semibold mb-2 text-primary">What is this app?</h3>
+              <p className="text-sm text-muted-foreground">
+                The MCQ Generator is an AI-powered tool designed to create high-quality medical multiple-choice questions. 
+                It helps educators and medical professionals generate challenging questions that test second-order thinking skills.
+              </p>
             </div>
 
-            {/* Backend Section */}
+            {/* How to Use */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Backend (Node.js + Express)</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Located in /server</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Express.js server handling HTTP requests</li>
-                  <li>RESTful API endpoints for:
-                    <ul className="list-circle pl-5 mt-1">
-                      <li>MCQ generation leveraging OpenAI's o1 series of reasoning models</li>
-                      <li>CRUD operations for MCQs</li>
-                      <li>User authentication</li>
-                      <li>System prompt management</li>
-                    </ul>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Database Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Database (PostgreSQL)</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Schema defined in /db/schema.ts using Drizzle ORM</p>
-                <p>Two main tables:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>users: Stores user authentication data</li>
-                  <li>mcqs: Stores generated MCQs with their metadata</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Key APIs Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Key APIs</h3>
+              <h3 className="text-lg font-semibold mb-2 text-primary">How to Use</h3>
               <div className="space-y-4 text-sm text-muted-foreground">
                 <div>
-                  <h4 className="font-medium">OpenAI Integration:</h4>
+                  <h4 className="font-medium">1. Generate Questions</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Uses o3-mini model for generating MCQs</li>
-                    <li>Structured prompt system for consistent output</li>
+                    <li>Enter your medical topic in the input field</li>
+                    <li>Optionally add reference text for more specific questions</li>
+                    <li>Choose the complexity level (low, medium, high)</li>
+                    <li>Click "Generate" to create your MCQ</li>
                   </ul>
                 </div>
+
                 <div>
-                  <h4 className="font-medium">RESTful Endpoints:</h4>
+                  <h4 className="font-medium">2. Review and Edit</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>/api/mcq/generate: Generate new MCQs</li>
-                    <li>/api/mcq/save: Save MCQs to database</li>
-                    <li>/api/mcq/history: Fetch MCQ history</li>
-                    <li>/api/prompt: Manage system prompts</li>
+                    <li>Preview the generated question</li>
+                    <li>Edit any part of the MCQ if needed</li>
+                    <li>Save to your library when satisfied</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">3. Manage Your MCQs</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>View all saved MCQs in your library</li>
+                    <li>Rate questions for quality tracking</li>
+                    <li>Edit or delete questions as needed</li>
+                    <li>Export selected MCQs to PDF or Excel</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">4. Export Options</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Export to PDF with full answers and explanations</li>
+                    <li>Create practice sets without answers</li>
+                    <li>Export to Excel for easy editing</li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            {/* Key Libraries Section */}
+            {/* Features */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Key Libraries</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>@tanstack/react-query: Data fetching/caching</li>
-                  <li>openai: OpenAI API integration</li>
-                  <li>drizzle-orm: Database ORM</li>
-                  <li>express: Backend server</li>
-                </ul>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>tailwindcss: Utility-first CSS</li>
-                  <li>shadcn/ui: React component library</li>
-                  <li>zod: Schema validation</li>
-                </ul>
-              </div>
+              <h3 className="text-lg font-semibold mb-2 text-primary">Key Features</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                <li>AI-powered question generation using OpenAI models</li>
+                <li>Second-order thinking focus for deeper learning</li>
+                <li>Multiple complexity levels to suit different needs</li>
+                <li>Built-in question editor for customization</li>
+                <li>Multiple export formats (PDF, Excel)</li>
+                <li>Practice set generation for student assessment</li>
+              </ul>
             </div>
 
-            {/* Architecture Section */}
+            {/* Tips */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Architecture</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>The application follows a typical three-tier architecture:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Presentation Layer (React frontend)</li>
-                  <li>Application Layer (Express backend)</li>
-                  <li>Data Layer (PostgreSQL database)</li>
-                </ul>
-                <p className="mt-4">All components communicate via RESTful APIs, with TypeScript ensuring type safety across the full stack.</p>
-              </div>
+              <h3 className="text-lg font-semibold mb-2 text-primary">Tips for Best Results</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                <li>Be specific with your medical topics</li>
+                <li>Provide reference text for more targeted questions</li>
+                <li>Use medium complexity for standard educational assessments</li>
+                <li>Review and rate MCQs to help improve generation quality</li>
+                <li>Export in practice format for student assessments</li>
+              </ul>
             </div>
           </div>
         </ScrollArea>

@@ -209,7 +209,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/prompt'] });
       toast({
         title: "Success",
-        description: "System prompt has been updated",
+        description: "Developer prompt has been updated",
       });
     } catch (error: any) {
       toast({
