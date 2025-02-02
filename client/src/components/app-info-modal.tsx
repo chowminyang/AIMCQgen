@@ -28,8 +28,7 @@ export function AppInfoModal() {
             <div>
               <h3 className="text-lg font-semibold mb-2 text-primary">What is this app?</h3>
               <p className="text-sm text-muted-foreground">
-                The MCQ Generator is an AI-powered tool designed to create high-quality medical multiple-choice questions. 
-                It helps educators and medical professionals generate challenging questions that test second-order thinking skills.
+                The MCQ Generator is an advanced AI-powered tool designed specifically for medical education. It leverages cutting-edge AI technology to create high-quality, clinically relevant multiple-choice questions that test second-order thinking skills. Perfect for medical educators, exam preparers, and healthcare professionals who need to create challenging yet fair assessment materials.
               </p>
             </div>
 
@@ -39,66 +38,153 @@ export function AppInfoModal() {
               <div className="space-y-4 text-sm text-muted-foreground">
                 <div>
                   <h4 className="font-medium">1. Generate Questions</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Enter your medical topic in the input field</li>
-                    <li>Optionally add reference text for more specific questions</li>
-                    <li>Choose the complexity level (low, medium, high)</li>
-                    <li>Click "Generate" to create your MCQ</li>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <span className="font-semibold">Select Topic:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Enter a specific medical topic (e.g., "Beta-blockers in heart failure")</li>
+                        <li>Be precise to get more focused questions</li>
+                        <li>Avoid overly broad topics like "cardiology" or "medicine"</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Add Reference Text (Optional):</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Paste relevant clinical guidelines or research papers</li>
+                        <li>Include specific information you want to test</li>
+                        <li>The AI will incorporate this material into the question</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Set Complexity Level:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Low: Basic concept application</li>
+                        <li>Medium: Clinical reasoning and decision-making</li>
+                        <li>High: Complex case scenarios and advanced concepts</li>
+                      </ul>
+                    </li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-medium">2. Review and Edit</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Preview the generated question</li>
-                    <li>Edit any part of the MCQ if needed</li>
-                    <li>Save to your library when satisfied</li>
+                  <h4 className="font-medium">2. Review and Edit Generated MCQs</h4>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <span className="font-semibold">Clinical Scenario:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Check for accuracy and clarity</li>
+                        <li>Ensure all vital information is included</li>
+                        <li>Verify units and reference ranges</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Question Structure:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Verify the question tests second-order thinking</li>
+                        <li>Ensure clarity and unambiguity</li>
+                        <li>Check if all options are plausible</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Explanation:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Review reasoning for correct answer</li>
+                        <li>Verify explanations for incorrect options</li>
+                        <li>Ensure educational value of feedback</li>
+                      </ul>
+                    </li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-medium">3. Manage Your MCQs</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>View all saved MCQs in your library</li>
-                    <li>Rate questions for quality tracking</li>
-                    <li>Edit or delete questions as needed</li>
-                    <li>Export selected MCQs to PDF or Excel</li>
+                  <h4 className="font-medium">3. Manage Your Question Bank</h4>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <span className="font-semibold">Organization:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Save questions with meaningful names</li>
+                        <li>Use consistent topic categorization</li>
+                        <li>Rate questions to track quality</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Editing:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Update questions as medical knowledge evolves</li>
+                        <li>Refine based on student feedback</li>
+                        <li>Maintain consistency across your question bank</li>
+                      </ul>
+                    </li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-medium">4. Export Options</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Export to PDF with full answers and explanations</li>
-                    <li>Create practice sets without answers</li>
-                    <li>Export to Excel for easy editing</li>
+                  <h4 className="font-medium">4. Export and Share</h4>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <span className="font-semibold">PDF Export:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Full version with answers and explanations for teaching</li>
+                        <li>Practice version without answers for assessment</li>
+                        <li>Professional formatting with consistent styling</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span className="font-semibold">Excel Export:</span>
+                      <ul className="list-circle pl-5 mt-1">
+                        <li>Bulk editing and organization</li>
+                        <li>Easy import into other systems</li>
+                        <li>Question bank analysis and tracking</li>
+                      </ul>
+                    </li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            {/* Features */}
+            {/* Advanced Features */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Key Features</h3>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                <li>AI-powered question generation using OpenAI models</li>
-                <li>Second-order thinking focus for deeper learning</li>
-                <li>Multiple complexity levels to suit different needs</li>
-                <li>Built-in question editor for customization</li>
-                <li>Multiple export formats (PDF, Excel)</li>
-                <li>Practice set generation for student assessment</li>
+              <h3 className="text-lg font-semibold mb-2 text-primary">Advanced Features</h3>
+              <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <span className="font-semibold">AI Question Generation:</span>
+                  <ul className="list-circle pl-5 mt-1">
+                    <li>Uses OpenAI's latest models for medical content</li>
+                    <li>Ensures clinically relevant scenarios</li>
+                    <li>Generates evidence-based explanations</li>
+                  </ul>
+                </li>
+                <li>
+                  <span className="font-semibold">Second-Order Thinking Focus:</span>
+                  <ul className="list-circle pl-5 mt-1">
+                    <li>Tests application of knowledge</li>
+                    <li>Emphasizes clinical decision-making</li>
+                    <li>Promotes deep learning</li>
+                  </ul>
+                </li>
+                <li>
+                  <span className="font-semibold">Quality Assurance:</span>
+                  <ul className="list-circle pl-5 mt-1">
+                    <li>Built-in formatting and style checks</li>
+                    <li>Standard units and reference ranges</li>
+                    <li>Consistent question structure</li>
+                  </ul>
+                </li>
               </ul>
             </div>
 
-            {/* Tips */}
+            {/* Best Practices */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-primary">Tips for Best Results</h3>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                <li>Be specific with your medical topics</li>
-                <li>Provide reference text for more targeted questions</li>
-                <li>Use medium complexity for standard educational assessments</li>
-                <li>Review and rate MCQs to help improve generation quality</li>
-                <li>Export in practice format for student assessments</li>
+              <h3 className="text-lg font-semibold mb-2 text-primary">Best Practices for Quality MCQs</h3>
+              <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                <li>Start with specific, well-defined topics</li>
+                <li>Include relevant clinical guidelines in reference text</li>
+                <li>Review and rate questions regularly</li>
+                <li>Use medium complexity for standard assessments</li>
+                <li>Maintain a consistent style across questions</li>
+                <li>Update questions based on new medical evidence</li>
+                <li>Test questions with target audience before large-scale use</li>
+                <li>Use practice export format for student assessments</li>
               </ul>
             </div>
           </div>

@@ -14,7 +14,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PromptEditor } from "@/components/prompt-editor";
 import { AppInfoModal } from "@/components/app-info-modal";
 import { ModelSelector } from "@/components/model-selector";
-import { TutorialModal } from "@/components/tutorial-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
@@ -244,7 +243,6 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-2">
                 <ThemeToggle />
-                <TutorialModal />
                 <AppInfoModal />
               </div>
             </CardHeader>
