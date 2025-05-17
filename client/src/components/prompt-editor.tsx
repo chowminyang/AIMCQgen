@@ -66,7 +66,7 @@ export function PromptEditor({ currentPrompt, onSave }: PromptEditorProps) {
           System Prompt Editor
         </CardTitle>
         <CardDescription>
-          Edit the pseudo-system prompt sent to OpenAI o1-mini API
+          Edit the pseudo-system prompt sent to OpenAI o4-mini API
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
