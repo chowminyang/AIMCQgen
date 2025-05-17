@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 

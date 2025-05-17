@@ -142,7 +142,7 @@ export default function Home() {
             explanation: editedMCQ.explanation,
           },
           reasoningEffort: form.reasoningEffort, // Access reasoningEffort from the form state.  Adjust as needed for your form library
-          model: "o3-mini" // Updated model here
+          model: "o4-mini" // Updated model here
         });
 
         toast({
@@ -232,7 +232,7 @@ export default function Home() {
               <div>
                 <CardTitle className="mb-2">Generating SBAs using reasoning LLMs</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  This app leverages OpenAI's o3-mini model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
+                  This app leverages OpenAI's o4-mini model to generate high-quality Single Best Answer (SBA) questions. Simply input your medical topic, and the AI will thoughtfully construct a challenging question following structured educational guidelines by reasoning through a chain-of-thought process.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   This application is experimental and copyrighted to <em className="font-bold">Chow Minyang, 2025</em>.

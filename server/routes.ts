@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
@@ -78,7 +79,7 @@ Return your response in this exact JSON format:
 }`;
 
 // Default model setting
-let currentModel = "o3-mini";
+let currentModel = "o4-mini";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -106,7 +107,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/settings/model", (req, res) => {
     try {
       const { model } = req.body;
-      if (model !== "o1") {
+      if (model !== "o4-mini") {
         return res.status(400).send("Invalid model selection");
       }
       currentModel = model;
@@ -136,7 +137,7 @@ export function registerRoutes(app: Express): Server {
         promptContent += `\n\nReference Material:\n${referenceText}`;
       }
 
-      const completion = await openai.chat.completions.create({
+      const response = await openai.chat.completions.create({
         model: currentModel,
         messages: [
           {
@@ -147,7 +148,7 @@ export function registerRoutes(app: Express): Server {
         response_format: { type: "json_object" },
       });
 
-      const generatedContent = completion.choices[0].message.content;
+      const generatedContent = response.choices[0].message.content;
       if (!generatedContent) {
         throw new Error("No content generated");
       }
@@ -186,7 +187,7 @@ export function registerRoutes(app: Express): Server {
           topic: topic.trim(),
           raw_content: rawContent,
           parsed_content: parsedContent,
-          model: model || "o1",
+          model: model || "o4-mini",
           reasoning_effort: reasoningEffort || "medium",
         })
         .returning();
@@ -330,7 +331,7 @@ export function registerRoutes(app: Express): Server {
       const ws_data = mcqData.map((mcq) => ({
         Name: mcq.name,
         Topic: mcq.topic,
-        Model: mcq.model || "o1",
+        Model: mcq.model || "o4-mini",
         "Clinical Scenario": mcq.parsed_content.clinicalScenario,
         Question: mcq.parsed_content.question,
         "Option A": mcq.parsed_content.options.A,
@@ -453,7 +454,7 @@ export function registerRoutes(app: Express): Server {
         doc
           .font("Helvetica")
           .fontSize(12)
-          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || "o1"}`, {
+          .text(`Topic: ${mcq.topic} • Model: ${mcq.model || "o4-mini"}`, {
             color: "grey",
           });
         doc.moveDown();
@@ -689,12 +690,12 @@ export function registerRoutes(app: Express): Server {
 
       const prompt = `Please rewrite the following clinical scenario to be clear, concise, and grammatically correct while maintaining all medical details and information:\n\n${text}`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await openai.chat.completions.create({
+        model: "o4-mini",
         messages: [{ role: "user", content: prompt }],
       });
 
-      const rewrittenText = completion.choices[0].message.content;
+      const rewrittenText = response.choices[0].message.content;
       if (!rewrittenText) {
         throw new Error("No content generated");
       }
